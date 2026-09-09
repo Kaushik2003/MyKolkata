@@ -5,8 +5,6 @@ import { ClerkProvider } from '@clerk/nextjs'
 import { ThemeProvider } from '../context/ThemeContext'
 import { AuthProvider, useAuth } from '../context/AuthContext'
 import TopNavbar from '../components/TopNavbar'
-import DarkModeToggle from '../components/DarkModeToggle'
-import UserMenu from '../components/UserMenu'
 import Navbar from '../components/Navbar'
 
 function Layout({ children }) {
@@ -19,8 +17,6 @@ function Layout({ children }) {
       {isAuthenticated && !isAuthPage && (
         <>
           <TopNavbar />
-          <DarkModeToggle />
-          <UserMenu />
           <Navbar />
         </>
       )}
