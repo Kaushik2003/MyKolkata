@@ -36,19 +36,207 @@ model MarketplaceItem {
 }
 
 model Place {
+  id               String                                 @id @default(cuid())
+  slug             String?                                @unique
+  name             String
+  description      String?
+  image            String?
+  location         String?
+  address          String?
+  area             String?
+  type             String?
+  tags             String[]                               @default([])
+  latitude         Decimal?                               @db.Decimal(9, 6)
+  longitude        Decimal?                               @db.Decimal(9, 6)
+  geo              Unsupported("geography(Point, 4326)")?
+  rating           Float?
+  ratingCount      Int?
+  priceLevel       Int?
+  phone            String?
+  website          String?
+  openingHours     Json?
+  status           String?
+  editorialStatus  String                                 @default("AUTO")
+  sourceConfidence Float?                                 @default(0)
+  lastVerifiedAt   DateTime?
+  publishedAt      DateTime?
+  createdAt        DateTime                               @default(now())
+  updatedAt        DateTime                               @updatedAt
+
+  categories      PlaceCategory[]
+  sources         PlaceSource[]
+  photos          PlacePhoto[]
+  collectionItems CollectionItem[]
+  interactions    PlaceInteraction[]
+  experiences     Experience[]
+
+  @@index([latitude, longitude])
+  @@index([area])
+  @@index([type])
+  @@index([editorialStatus, publishedAt])
+  @@index([createdAt(sort: Desc)])
+  @@map("places")
+}
+
+model Category {
   id          String   @id @default(cuid())
+  slug        String   @unique
   name        String
   description String?
-  image       String?
-  location    String?
-  type        String?
-  rating      Float?
-  status      String?
+  icon        String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@index([createdAt(sort: Desc)])
-  @@map("places")
+  places PlaceCategory[]
+
+  @@index([isActive, sortOrder])
+  @@map("categories")
+}
+
+model PlaceCategory {
+  placeId    String
+  categoryId String
+  source     String?
+  confidence Float?  @default(1)
+
+  place    Place    @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([placeId, categoryId])
+  @@index([categoryId])
+  @@map("place_categories")
+}
+
+model PlaceSource {
+  id          String    @id @default(cuid())
+  placeId     String
+  provider    String
+  externalId  String
+  sourceUrl   String?
+  attribution String?
+  license     String?
+  raw         Json?
+  fetchedAt   DateTime  @default(now())
+  expiresAt   DateTime?
+
+  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, externalId])
+  @@index([placeId])
+  @@index([provider, expiresAt])
+  @@map("place_sources")
+}
+
+model PlacePhoto {
+  id             String    @id @default(cuid())
+  placeId        String
+  url            String
+  sourceUrl      String?
+  altText        String?
+  kind           String    @default("PHOTO")
+  provider       String?
+  attribution    String?
+  license        String?
+  confidence     Float?
+  verification   String    @default("VERIFIED")
+  width          Int?
+  height         Int?
+  position       Int       @default(0)
+  isPrimary      Boolean   @default(false)
+  lastVerifiedAt DateTime?
+  createdAt      DateTime  @default(now())
+
+  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@index([placeId, position])
+  @@index([verification, lastVerifiedAt])
+  @@map("place_photos")
+}
+
+model Collection {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  name        String
+  description String?
+  image       String?
+  status      String    @default("DRAFT")
+  startsAt    DateTime?
+  endsAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  items CollectionItem[]
+
+  @@index([status, startsAt, endsAt])
+  @@map("collections")
+}
+
+model CollectionItem {
+  collectionId String
+  placeId      String
+  position     Int     @default(0)
+  note         String?
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  place      Place      @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, placeId])
+  @@index([collectionId, position])
+  @@map("collection_items")
+}
+
+model Experience {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  title       String
+  description String?
+  image       String?
+  venueId     String?
+  startsAt    DateTime?
+  endsAt      DateTime?
+  bookingUrl  String?
+  sourceUrl   String?
+  status      String    @default("DRAFT")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  venue Place? @relation(fields: [venueId], references: [id], onDelete: SetNull)
+
+  @@index([status, startsAt])
+  @@index([venueId])
+  @@map("experiences")
+}
+
+model PlaceInteraction {
+  id          String   @id @default(cuid())
+  placeId     String?
+  kind        String
+  anonymousId String?
+  userId      String?
+  metadata    Json?
+  occurredAt  DateTime @default(now())
+
+  place Place? @relation(fields: [placeId], references: [id], onDelete: SetNull)
+
+  @@index([placeId, kind, occurredAt(sort: Desc)])
+  @@index([anonymousId, occurredAt(sort: Desc)])
+  @@map("place_interactions")
+}
+
+model ExploreSearch {
+  id              String   @id @default(cuid())
+  query           String
+  normalizedQuery String
+  latitude        Decimal? @db.Decimal(9, 6)
+  longitude       Decimal? @db.Decimal(9, 6)
+  resultCount     Int      @default(0)
+  anonymousId     String?
+  createdAt       DateTime @default(now())
+
+  @@index([normalizedQuery, createdAt(sort: Desc)])
+  @@map("explore_searches")
 }
 
 model Pandal {

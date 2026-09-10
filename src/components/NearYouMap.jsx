@@ -18,8 +18,18 @@ function safeErrorMessage(error) {
   return message.replace(/([?&]api_key=)[^&\s]+/gi, '$1[redacted]')
 }
 
-function imageIdFor(placeId) {
-  return `mykolkata-photo-${placeId}`
+const CATEGORY_MARKERS = {
+  cafes: { color: '#d8543d', label: 'C' },
+  food: { color: '#f5c344', label: 'F' },
+  places: { color: '#3157e5', label: 'P' },
+  culture: { color: '#7946a8', label: 'A' },
+  shopping: { color: '#24765f', label: 'S' },
+  experiences: { color: '#e94b35', label: 'E' },
+  outdoors: { color: '#238d84', label: 'O' }
+}
+
+function imageIdFor(place) {
+  return place.hasRealImage ? `mykolkata-photo-${place.id}` : `mykolkata-category-${place.markerCategory || 'places'}`
 }
 
 function placesGeoJson(places, selectedPlaceId) {
@@ -32,7 +42,7 @@ function placesGeoJson(places, selectedPlaceId) {
         id: place.id,
         name: place.name,
         category: place.category,
-        imageId: imageIdFor(place.id),
+        imageId: imageIdFor(place),
         selected: place.id === selectedPlaceId
       },
       geometry: {
@@ -43,7 +53,7 @@ function placesGeoJson(places, selectedPlaceId) {
   }
 }
 
-function createPhotoImage(source) {
+function createPhotoImage(source, category = 'places', hasRealImage = true) {
   return new Promise((resolve) => {
     const size = 64
     const canvas = document.createElement('canvas')
@@ -68,38 +78,44 @@ function createPhotoImage(source) {
       context.beginPath()
       context.arc(32, 32, 25, 0, Math.PI * 2)
       context.clip()
-      if (hasImage) {
+      if (hasImage && hasRealImage) {
         const scale = Math.max(50 / image.naturalWidth, 50 / image.naturalHeight)
         const width = image.naturalWidth * scale
         const height = image.naturalHeight * scale
         context.drawImage(image, 32 - width / 2, 32 - height / 2, width, height)
       } else {
-        context.fillStyle = '#e94b35'
+        const marker = CATEGORY_MARKERS[category] || CATEGORY_MARKERS.places
+        context.fillStyle = marker.color
         context.fillRect(7, 5, 50, 50)
         context.fillStyle = '#ffffff'
-        context.beginPath()
-        context.arc(32, 32, 7, 0, Math.PI * 2)
-        context.fill()
+        context.font = '700 22px Manrope, sans-serif'
+        context.textAlign = 'center'
+        context.textBaseline = 'middle'
+        context.fillText(marker.label, 32, 31)
       }
       context.restore()
       resolve(context.getImageData(0, 0, size, size))
     }
 
-    image.onload = () => finish(true)
-    image.onerror = () => finish(false)
-    image.decoding = 'async'
-    image.src = source
+    if (hasRealImage && source) {
+      image.onload = () => finish(true)
+      image.onerror = () => finish(false)
+      image.decoding = 'async'
+      image.src = source
+    } else {
+      finish(false)
+    }
   })
 }
 
 async function ensurePhotoImages(map, places, registeredImageIds) {
   await Promise.all(places.map(async (place) => {
-    const imageId = imageIdFor(place.id)
+    const imageId = imageIdFor(place)
     if (map.hasImage(imageId)) {
       registeredImageIds.add(imageId)
       return
     }
-    const imageData = await createPhotoImage(place.image)
+    const imageData = await createPhotoImage(place.image, place.markerCategory, place.hasRealImage)
     if (!map.hasImage(imageId)) map.addImage(imageId, imageData)
     registeredImageIds.add(imageId)
   }))
