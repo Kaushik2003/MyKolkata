@@ -23,13 +23,15 @@ test('selected places offer a safe Google Maps coordinate link', () => {
   assert.match(stylesSource, /\.detailsFooter a:hover/)
 })
 
-test('Ola map places use photography while grouped places use native count clusters', () => {
+test('Ola map places use real photos or category markers while grouped places use native count clusters', () => {
   assert.equal(packageSource.dependencies['olamaps-web-sdk'], '1.3.0')
   assert.match(mapSource, /import\('olamaps-web-sdk'\)/)
   assert.match(mapSource, /new OlaMaps\(\{ apiKey \}\)/)
   assert.match(mapSource, /cluster: true/)
   assert.match(mapSource, /getClusterExpansionZoom/)
   assert.match(mapSource, /image\.src = source/)
+  assert.match(mapSource, /CATEGORY_MARKERS/)
+  assert.match(mapSource, /mykolkata-category-/)
   assert.match(mapSource, /map\.addImage\(imageId, imageData\)/)
   assert.doesNotMatch(mapSource, /PLACE_RING_LAYER_ID|mykolkata-place-rings/)
   assert.match(mapSource, /context\.arc\(32, 32, 29/)
@@ -97,19 +99,51 @@ test('mobile map filters stay below the control deck instead of escaping the vie
 })
 
 test('mobile category and area chips support horizontal touch scrolling', () => {
-  assert.match(stylesSource, /@media \(max-width: 640px\)[\s\S]*?\.categoryFilters, \.areaFilters\s*\{[^}]*overflow-x: auto;[^}]*touch-action: pan-y;[^}]*-webkit-overflow-scrolling: touch;/s)
+  assert.match(stylesSource, /@media \(max-width: 640px\)[\s\S]*?\.categoryFilters, \.areaFilters\s*\{[^}]*overflow-x: auto;[^}]*touch-action: pan-x pan-y;[^}]*-webkit-overflow-scrolling: touch;/s)
   assert.match(stylesSource, /\.categoryFilters button, \.areaFilters button\s*\{[^}]*flex: 0 0 auto;/s)
   assert.match(pageSource, /function FilterScroller/)
-  assert.match(pageSource, /onPointerMove=/)
-  assert.match(pageSource, /event\.currentTarget\.scrollLeft = drag\.scrollLeft - distance/)
-  assert.match(pageSource, /onClickCapture=/)
+  assert.doesNotMatch(pageSource, /setPointerCapture|onPointerMove=|onClickCapture=/)
+  assert.match(pageSource, /onClick=\{\(\) => onCategoryChange\(item\)\}/)
+  assert.match(pageSource, /onClick=\{\(\) => onAreaChange\(item\)\}/)
+})
+
+test('Near You never labels generic category artwork as a venue photo', () => {
+  assert.match(pageSource, /place\.hasRealImage && place\.image/)
+  assert.match(pageSource, /Photo not available for \$\{place\.name\}/)
+  assert.match(pageSource, /<PlaceVisual place=\{place\}/)
+})
+
+test('Near You uses truthful loading skeletons instead of demo-place fallbacks', () => {
+  assert.match(pageSource, /function PlaceResultsSkeleton\(\{ layout \}\)/)
+  assert.match(pageSource, /dataStatus === 'loading' \? \(\s*<PlaceResultsSkeleton layout=\{view\}/s)
+  assert.match(pageSource, /dataStatus === 'success' && !visiblePlaces\.length/)
+  assert.doesNotMatch(pageSource, /setDataPlaces\(nearbyPlaces/)
+  assert.doesNotMatch(pageSource, /Showing saved Kolkata picks/)
+  assert.match(stylesSource, /\.placeSkeleton/)
+  assert.match(stylesSource, /@keyframes placeSkeletonSweep/)
+})
+
+test('Near You only presents distance as user-relative after location is known', () => {
+  assert.match(pageSource, /showDistance && place\.distance/)
+  assert.match(pageSource, /locationKnown \? 'Near you' : 'Kolkata map'/)
+  assert.match(pageSource, /userPosition \? 'Near You' : 'Explore Kolkata'/)
+  assert.match(pageSource, /if \(userPosition\) \{\s*params\.set\('lat'/s)
+  assert.match(pageSource, /routeLocate === '1'/)
+})
+
+test('curated Explore guides retain context while loading useful place queries', () => {
+  assert.match(pageSource, /findExploreGuide\(routeGuideId\)/)
+  assert.match(pageSource, /activeGuide\?\.name/)
+  assert.match(pageSource, /activeGuide\?\.description/)
+  assert.match(stylesSource, /\.guideIntro/)
 })
 
 test('Search this area applies the current geographic viewport', () => {
   assert.match(mapSource, /bounds\.getNorth\(\)/)
   assert.match(mapSource, /bounds\.getSouth\(\)/)
-  assert.match(pageSource, /setViewportBounds\(pendingBounds\)/)
-  assert.match(pageSource, /coordinates\.lat <= viewportBounds\.north/)
+  assert.match(pageSource, /setRequestBounds\(pendingBounds\)/)
+  assert.match(pageSource, /\/api\/explore\/map/)
+  assert.match(pageSource, /Object\.entries\(requestBounds\)/)
   assert.match(pageSource, />\s*Search this area\s*</)
 })
 

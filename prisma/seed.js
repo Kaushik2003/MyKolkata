@@ -61,16 +61,39 @@ const marketplace = [
 ]
 
 const places = [
-  { name: 'Flurys', type: 'Cafe', location: 'Park Street', description: 'Iconic cafe known for its European-style cakes and pastries.', image: '/flury.avif', rating: 4.5, status: 'Open now' },
+  { slug: 'flurys-park-street', name: 'Flurys', type: 'Cafe', location: 'Park Street', area: 'Park Street', address: '18A Park Street, Kolkata', latitude: 22.552732, longitude: 88.352590, tags: ['cafe', 'bakery', 'breakfast'], description: 'Iconic cafe known for its European-style cakes and pastries.', image: '/flury.avif', rating: 4.5, status: 'Open now', sourceConfidence: 1 },
   { name: 'Paris Cafe', type: 'Cafe', location: 'Park Street', description: 'Cozy cafe serving French pastries and coffee.', image: '/street.jpg', rating: 4.3, status: 'Open now' },
-  { name: 'Mocambo', type: 'Cafe', location: 'Park Street', description: 'Vintage restaurant with Continental cuisine.', image: '/moc.jpg', rating: 4.6, status: 'Open now' },
-  { name: 'Victoria Memorial', type: 'Monument', location: 'Central Kolkata', description: 'Majestic marble building and museum.', image: 'https://images.unsplash.com/photo-1558431382-27e303142255?w=800', rating: 4.8, status: 'Open now' },
-  { name: 'Howrah Bridge', type: 'Bridge', location: 'Howrah', description: 'Iconic cantilever bridge over Hooghly River.', image: '/hwh.jpg', rating: 4.7, status: 'Open now' },
-  { name: 'Indian Museum', type: 'Museum', location: 'Park Street', description: 'Oldest and largest museum in India.', image: 'https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?w=800', rating: 4.5, status: 'Closes at 5 PM' },
+  { slug: 'mocambo-park-street', name: 'Mocambo', type: 'Food', location: 'Park Street', area: 'Park Street', address: '25B Park Street, Kolkata', latitude: 22.553247, longitude: 88.353177, tags: ['restaurant', 'continental'], description: 'Vintage restaurant with Continental cuisine.', image: '/moc.jpg', rating: 4.6, status: 'Open now', sourceConfidence: 1 },
+  { slug: 'victoria-memorial', name: 'Victoria Memorial', type: 'Places', location: 'Central Kolkata', area: 'Maidan', address: 'Victoria Memorial Hall, Kolkata', latitude: 22.544809, longitude: 88.342557, tags: ['monument', 'museum', 'heritage'], description: 'Majestic marble building and museum.', image: 'https://images.unsplash.com/photo-1558431382-27e303142255?w=800', rating: 4.8, status: 'Open now', sourceConfidence: 1 },
+  { slug: 'howrah-bridge', name: 'Howrah Bridge', type: 'Places', location: 'Howrah', area: 'Howrah', address: 'Howrah Bridge, Kolkata', latitude: 22.585148, longitude: 88.346806, tags: ['bridge', 'landmark', 'heritage'], description: 'Iconic cantilever bridge over Hooghly River.', image: '/hwh.jpg', rating: 4.7, status: 'Open now', sourceConfidence: 1 },
+  { slug: 'indian-museum-kolkata', name: 'Indian Museum', type: 'Culture', location: 'Park Street', area: 'Chowringhee', address: '27 Jawaharlal Nehru Road, Kolkata', latitude: 22.557586, longitude: 88.351027, tags: ['museum', 'culture', 'heritage'], description: 'Oldest and largest museum in India.', image: 'https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?w=800', rating: 4.5, status: 'Closes at 5 PM', sourceConfidence: 1 },
   { name: 'Darjeeling', type: 'Hill Station', location: 'West Bengal', description: 'Queen of Hills with tea gardens and mountain views.', image: '/dar.webp', rating: 4.8, status: 'Open now' },
   { name: 'Sundarbans', type: 'Forest', location: 'West Bengal', description: "World's largest mangrove forest.", image: '/sundarban.jpg', rating: 4.7, status: 'Open now' },
   { name: 'Digha', type: 'Beach', location: 'West Bengal', description: 'Popular beach destination.', image: '/dig.jpg', rating: 4.4, status: 'Open now' }
 ]
+
+const exploreCategories = [
+  { slug: 'cafes', name: 'Cafés', icon: 'coffee', sortOrder: 0 },
+  { slug: 'food', name: 'Food', icon: 'food', sortOrder: 1 },
+  { slug: 'places', name: 'Places', icon: 'place', sortOrder: 2 },
+  { slug: 'culture', name: 'Culture', icon: 'culture', sortOrder: 3 },
+  { slug: 'shopping', name: 'Shopping', icon: 'shopping', sortOrder: 4 },
+  { slug: 'experiences', name: 'Experiences', icon: 'experience', sortOrder: 5 },
+  { slug: 'outdoors', name: 'Outdoors', icon: 'outdoors', sortOrder: 6 },
+]
+
+const placeCategoryByType = {
+  Cafe: 'cafes',
+  Food: 'food',
+  Places: 'places',
+  Culture: 'culture',
+  Monument: 'places',
+  Bridge: 'places',
+  Museum: 'culture',
+  'Hill Station': 'places',
+  Forest: 'outdoors',
+  Beach: 'outdoors',
+}
 
 const pandals = [
   { name: 'Bagbazar Sarbojanin', location: 'Bagbazar, Kolkata', description: 'One of the oldest and most popular Durga Puja celebrations in Kolkata.', image: 'https://images.unsplash.com/photo-1601181487375-f2194c87a04b?w=800', distance: '2.5 km', rating: 4.8 },
@@ -136,6 +159,15 @@ const tinderProfiles = [
 ]
 
 async function seed() {
+  await prisma.placeInteraction.deleteMany()
+  await prisma.exploreSearch.deleteMany()
+  await prisma.experience.deleteMany()
+  await prisma.collectionItem.deleteMany()
+  await prisma.collection.deleteMany()
+  await prisma.placePhoto.deleteMany()
+  await prisma.placeSource.deleteMany()
+  await prisma.placeCategory.deleteMany()
+  await prisma.category.deleteMany()
   await prisma.news.deleteMany()
   await prisma.marketplaceItem.deleteMany()
   await prisma.place.deleteMany()
@@ -147,7 +179,20 @@ async function seed() {
 
   await prisma.news.createMany({ data: news })
   await prisma.marketplaceItem.createMany({ data: marketplace })
+  await prisma.category.createMany({ data: exploreCategories })
   await prisma.place.createMany({ data: places })
+  const [categoryRows, placeRows] = await Promise.all([
+    prisma.category.findMany({ select: { id: true, slug: true } }),
+    prisma.place.findMany({ select: { id: true, type: true } }),
+  ])
+  const categoryIds = new Map(categoryRows.map((category) => [category.slug, category.id]))
+  const placeCategories = placeRows
+    .map((place) => {
+      const categoryId = categoryIds.get(placeCategoryByType[place.type])
+      return categoryId ? { placeId: place.id, categoryId, source: 'seed', confidence: 1 } : null
+    })
+    .filter(Boolean)
+  if (placeCategories.length) await prisma.placeCategory.createMany({ data: placeCategories })
   await prisma.pandal.createMany({ data: pandals })
   await prisma.region.createMany({ data: regions })
   await prisma.community.createMany({ data: communities })

@@ -10,6 +10,8 @@
     "lint": "next lint",
     "db:push": "prisma db push",
     "db:seed": "node prisma/seed.js",
+    "data:import:places": "node scripts/import-place-catalog-to-db.mjs",
+    "data:enrich:images": "node scripts/enrich-place-images.mjs",
     "postinstall": "prisma generate",
     "test": "node --test \"tests/*.test.mjs\""
   },

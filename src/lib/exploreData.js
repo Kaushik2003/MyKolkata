@@ -16,7 +16,8 @@ export const trendingPlaces = [
     image: '/hero-bg.jpg',
     eyebrow: 'The city, in motion',
     description: 'Catch the last light, the buses and the river in one unforgettable frame.',
-    duration: 'Best at 5:30 PM'
+    duration: 'Best at 5:30 PM',
+    destination: { query: 'Howrah Bridge', view: 'grid' }
   },
   {
     id: 'park-street-after-dark',
@@ -26,7 +27,8 @@ export const trendingPlaces = [
     image: '/moc.jpg',
     eyebrow: 'A classic night out',
     description: 'Old-school dining rooms, live music and a proper Kolkata evening.',
-    duration: '3-stop trail'
+    duration: '3-stop trail',
+    destination: { query: 'Park Street', category: 'Food', view: 'grid' }
   },
   {
     id: 'maidan-slow-morning',
@@ -36,6 +38,7 @@ export const trendingPlaces = [
     image: '/maidan.jpg',
     eyebrow: 'Before the city rushes',
     description: 'Tea, green fields and an unhurried walk under an enormous sky.',
+    destination: { query: 'Maidan', view: 'grid' },
     duration: '60–90 min'
   }
 ]
@@ -123,6 +126,7 @@ export const hiddenKolkata = [
     area: 'Jorasanko',
     image: '/jstb.jpg',
     note: 'Go on a quiet weekday morning',
+    destination: { query: 'Jorasanko Thakur Bari', view: 'map' },
     description: 'Red verandahs, garden paths and stories from Bengal’s cultural renaissance.'
   },
   {
@@ -132,6 +136,7 @@ export const hiddenKolkata = [
     area: 'Chowringhee',
     image: '/indmus.jpg',
     note: 'Look beyond the galleries',
+    destination: { query: 'Indian Museum', view: 'map' },
     description: 'A calm, colonnaded pause hidden inside one of the city’s busiest quarters.'
   },
   {
@@ -141,18 +146,28 @@ export const hiddenKolkata = [
     area: 'College Street',
     image: '/ana.jpg',
     note: 'Best explored without a list',
+    destination: { query: 'College Street', view: 'grid' },
     description: 'Second-hand finds, narrow lanes and conversations that can last an afternoon.'
   }
 ]
 
 export const collections = [
-  { id: 'old-kolkata', name: 'Old Kolkata', count: '8 stories', image: '/hwh.jpg', tone: 'ink' },
-  { id: 'food-streets', name: 'Food Streets', count: '12 stops', image: '/moc.jpg', tone: 'red' },
-  { id: 'heritage', name: 'Heritage', count: '9 places', image: '/dkt.jpg', tone: 'cream' },
-  { id: 'art-culture', name: 'Art & Culture', count: '7 ideas', image: '/jstb.jpg', tone: 'blue' },
-  { id: 'weekend-plans', name: 'Weekend Plans', count: '6 itineraries', image: '/street.jpg', tone: 'yellow' },
-  { id: 'outdoor', name: 'Outdoor', count: '10 escapes', image: '/maidan.jpg', tone: 'green' }
+  { id: 'old-kolkata', name: 'Old Kolkata', count: '8 stories', image: '/hwh.jpg', tone: 'ink', destination: { category: 'Culture', view: 'grid' } },
+  { id: 'food-streets', name: 'Food Streets', count: '12 stops', image: '/moc.jpg', tone: 'red', destination: { category: 'Food', view: 'grid' } },
+  { id: 'heritage', name: 'Heritage', count: '9 places', image: '/dkt.jpg', tone: 'cream', destination: { category: 'Culture', view: 'grid' } },
+  { id: 'art-culture', name: 'Art & Culture', count: '7 ideas', image: '/jstb.jpg', tone: 'blue', destination: { category: 'Culture', view: 'grid' } },
+  { id: 'weekend-plans', name: 'Weekend Plans', count: '6 itineraries', image: '/street.jpg', tone: 'yellow', destination: { category: 'Experiences', view: 'grid' } },
+  { id: 'outdoor', name: 'Outdoor', count: '10 escapes', image: '/maidan.jpg', tone: 'green', destination: { category: 'Outdoors', view: 'grid' } }
 ]
+
+export const exploreGuides = [...trendingPlaces, ...hiddenKolkata, ...collections].reduce((guides, item) => {
+  guides[item.id] = item
+  return guides
+}, {})
+
+export function findExploreGuide(id) {
+  return exploreGuides[String(id || '')] || null
+}
 
 export const allExploreItems = [
   ...trendingPlaces,

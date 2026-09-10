@@ -4,6 +4,7 @@ import {
   allExploreItems,
   filterExploreItems,
   filterNearbyPlaces,
+  findExploreGuide,
   nearbyPlaces,
   searchNearbyPlaces
 } from '../src/lib/exploreData.js'
@@ -50,4 +51,13 @@ test('Explore content excludes Pujo', () => {
   const text = JSON.stringify(allExploreItems).toLocaleLowerCase('en-IN')
   assert.equal(text.includes('pujo'), false)
   assert.equal(text.includes('pandal'), false)
+})
+
+test('editorial guides resolve to useful map queries or category feeds', () => {
+  assert.deepEqual(findExploreGuide('park-street-after-dark').destination, {
+    query: 'Park Street', category: 'Food', view: 'grid'
+  })
+  assert.equal(findExploreGuide('museum-courtyard').destination.query, 'Indian Museum')
+  assert.equal(findExploreGuide('food-streets').destination.category, 'Food')
+  assert.equal(findExploreGuide('not-real'), null)
 })

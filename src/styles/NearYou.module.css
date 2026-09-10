@@ -92,9 +92,13 @@
 
 .mapStatusBar { position: absolute; top: 5.85rem; left: 50%; z-index: 300; display: flex; align-items: center; gap: .45rem; transform: translateX(-50%); }
 .mapStatusBar > span, .mapStatusBar button { min-height: 38px; padding: 0 .75rem; display: inline-flex; align-items: center; border: 1px solid rgba(20,32,51,.13); border-radius: 999px; color: var(--ink); background: rgba(255,255,255,.94); box-shadow: 0 8px 22px rgba(20,32,51,.14); font-size: .66rem; }
+.mapStatusBar small { margin-left: .28rem; color: var(--muted); font-size: .58rem; }
 .mapStatusBar button { border: 0; color: #fff; background: var(--ink); font-weight: 760; cursor: pointer; }
 .mapStatusBar button:hover { background: var(--red); }
 .locationNotice, .resultsNotice { margin: 0; padding: .65rem .85rem; border-left: 3px solid var(--amber); color: var(--ink); background: rgba(255,255,255,.96); box-shadow: 0 8px 24px rgba(20,32,51,.14); font-size: .72rem; }
+.dataNotice { position: absolute; left: 50%; bottom: 5.25rem; z-index: 310; width: min(380px, calc(100% - 2rem)); margin: 0; padding: .65rem .85rem; display: flex; align-items: center; justify-content: space-between; gap: .75rem; border-left: 3px solid var(--amber); color: var(--ink); background: rgba(255,255,255,.96); box-shadow: 0 8px 24px rgba(20,32,51,.14); font-size: .72rem; text-align: left; transform: translateX(-50%); }
+.dataNotice button { flex: 0 0 auto; min-height: 36px; padding: 0 .75rem; border: 0; border-radius: 999px; color: #fff; background: var(--ink); font-size: .66rem; font-weight: 760; cursor: pointer; }
+.dataNotice button:hover { background: var(--red); }
 .locationNotice { position: absolute; top: 9rem; left: 50%; z-index: 320; width: min(560px,calc(100% - 2rem)); transform: translateX(-50%); }
 .resultsNotice { margin-bottom: .8rem; }
 
@@ -105,7 +109,17 @@
 .userMarker { width: 20px; height: 20px; display: block; border: 4px solid #fff; border-radius: 50%; background: var(--blue); box-shadow: 0 0 0 7px rgba(49,87,229,.2), 0 8px 18px rgba(20,32,51,.28); }
 
 .placeDetails { position: absolute; left: max(1rem,calc((100% - 1180px) / 2)); bottom: 1rem; z-index: var(--z-place); width: min(405px,calc(100% - 2rem)); overflow: hidden; display: grid; grid-template-columns: 132px 1fr; border: 1px solid var(--line); border-radius: 1.1rem; color: var(--ink); background: rgba(255,255,255,.98); box-shadow: 0 22px 55px rgba(20,32,51,.24); backdrop-filter: blur(16px); }
-.placeDetails > img { width: 100%; height: 100%; object-fit: cover; }
+.placePhoto { width: 100%; height: 100%; object-fit: cover; }
+.placeVisualFallback { min-width: 0; height: 100%; min-height: 210px; padding: 1rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .35rem; color: #142033; background: linear-gradient(145deg,#f9e7bb,#f4c23f); text-align: center; }
+.placeVisualFallback svg { width: 2rem; height: 2rem; margin-bottom: .15rem; }
+.placeVisualFallback span { font-size: .73rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.placeVisualFallback small { color: rgba(20,32,51,.68); font-size: .58rem; font-weight: 650; }
+.visual_cafes { background: linear-gradient(145deg,#f8ddd2,#efb08f); }
+.visual_food { background: linear-gradient(145deg,#fbe8aa,#f4c23f); }
+.visual_culture { background: linear-gradient(145deg,#dfdbf7,#bdb1e8); }
+.visual_outdoors { background: linear-gradient(145deg,#d8eddc,#96c9a4); }
+.visual_shopping { background: linear-gradient(145deg,#d6ede7,#9dcec0); }
+.visual_experiences { background: linear-gradient(145deg,#dbe3ff,#a9baf3); }
 .closeDetails { position: absolute; top: .5rem; right: .5rem; width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 50%; color: var(--ink); background: #eff0f2; cursor: pointer; }
 .closeDetails:hover { color: #fff; background: var(--ink); }
 .detailsBody { min-width: 0; padding: .95rem 1rem; }
@@ -114,6 +128,12 @@
 .detailsMeta strong svg, .cardTopline strong svg { color: #dba600; }
 .detailsBody h2 { margin: .4rem 0; font-family: "Anek Kolkata", sans-serif; font-size: 1.55rem; font-weight: 680; line-height: .95; }
 .detailsBody > p { margin: .4rem 0; color: var(--muted); font-size: .68rem; line-height: 1.45; }
+.enrichmentStatus { font-size: .62rem !important; }
+.contactLinks { margin-top: .55rem; display: flex; gap: .4rem; }
+.contactLinks a { min-height: 34px; padding: 0 .7rem; display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; color: var(--ink); font-size: .64rem; font-weight: 760; text-decoration: none; }
+.contactLinks a:hover { color: #fff; border-color: var(--ink); background: var(--ink); }
+.imageCredit { margin-top: .5rem !important; font-size: .56rem !important; }
+.imageCredit a { color: inherit; text-underline-offset: 2px; }
 .detailsAddress { display: flex; align-items: flex-start; gap: .35rem; }
 .detailsAddress svg { flex: 0 0 auto; margin-top: .15rem; color: var(--red); }
 .detailsFooter { margin-top: .65rem; padding-top: .65rem; display: flex; align-items: center; justify-content: space-between; gap: .5rem; border-top: 1px solid var(--line); font-size: .65rem; }
@@ -133,10 +153,15 @@
 .explorer .filterStack { position: relative; top: auto; right: auto; width: 100%; margin-top: .7rem; box-shadow: 0 12px 30px rgba(20,32,51,.1); }
 .resultsSummary { margin: 1rem 0 .8rem; color: var(--muted); font-size: .74rem; }
 .resultsSummary strong { color: var(--ink); }
+.guideIntro { max-width: 62ch; margin: -.25rem 0 1.2rem; color: var(--muted); font-size: .82rem; line-height: 1.55; }
+.guideIntro { max-width: 62ch; margin: -.25rem 0 1.25rem; color: var(--muted); font-size: .82rem; line-height: 1.55; }
 .gridView { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: .9rem; }
 .listView { display: grid; gap: .75rem; }
+.loadMore { min-height: 44px; margin: 1.25rem auto 0; padding: 0 1.15rem; display: block; border: 1px solid var(--ink); border-radius: 999px; color: var(--ink); background: transparent; font-size: .72rem; font-weight: 780; cursor: pointer; }
+.loadMore:hover { color: #fff; background: var(--ink); }
+.loadMore:disabled { cursor: progress; opacity: .58; }
 .placeCard { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 1.1rem; background: var(--surface); }
-.placeCard > img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.placeCard > .placePhoto, .placeCard > .placeVisualFallback { width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; }
 .cardBody { padding: 1rem; }
 .cardTopline { padding-right: 0; }
 .cardBody h2 { margin: .45rem 0; font-family: "Anek Kolkata", sans-serif; font-size: 1.4rem; font-weight: 680; line-height: .96; }
@@ -146,11 +171,25 @@
 .cardFooter { margin-top: .9rem; padding-top: .75rem; display: flex; align-items: center; justify-content: space-between; gap: .6rem; border-top: 1px solid var(--line); }
 .cardFooter strong { font-size: .68rem; }
 .cardFooter button { min-height: 40px; padding: 0 .8rem; border: 1px solid var(--ink); border-radius: 999px; color: var(--ink); background: transparent; font-size: .67rem; font-weight: 760; cursor: pointer; }
+.cardFooter button:only-child { margin-left: auto; }
 .cardFooter button:hover { color: #fff; background: var(--ink); }
 .placeCardList { display: grid; grid-template-columns: minmax(190px,27%) 1fr; }
-.placeCardList > img { height: 100%; min-height: 210px; aspect-ratio: auto; }
+.placeCardList > .placePhoto, .placeCardList > .placeVisualFallback { height: 100%; min-height: 210px; aspect-ratio: auto; }
 .placeCardList .cardBody { align-self: center; padding: 1.25rem 1.4rem; }
 .placeCardList .cardBody > p { min-height: auto; }
+.placeSkeleton { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 1.1rem; background: var(--surface); }
+.placeSkeletonMedia, .placeSkeletonBody span, .placeSkeletonBody strong, .placeSkeletonBody small, .placeSkeletonBody i { display: block; background: linear-gradient(100deg, rgba(20,32,51,.07) 20%, rgba(20,32,51,.14) 38%, rgba(20,32,51,.07) 56%); background-size: 220% 100%; animation: placeSkeletonSweep 1.35s ease-in-out infinite; }
+.placeSkeletonMedia { width: 100%; aspect-ratio: 4 / 3; }
+.placeSkeletonBody { padding: 1rem; }
+.placeSkeletonBody span { width: 24%; height: .5rem; border-radius: 999px; }
+.placeSkeletonBody strong { width: 62%; height: 1.25rem; margin-top: .75rem; border-radius: .3rem; }
+.placeSkeletonBody small { width: 88%; height: .55rem; margin-top: .65rem; border-radius: 999px; }
+.placeSkeletonBody small + small { width: 68%; margin-top: .4rem; }
+.placeSkeletonBody i { width: 34%; height: 2.5rem; margin: 1rem 0 0 auto; border-radius: 999px; }
+.placeSkeletonList { display: grid; grid-template-columns: minmax(190px,27%) 1fr; }
+.placeSkeletonList .placeSkeletonMedia { height: 100%; min-height: 210px; aspect-ratio: auto; }
+.placeSkeletonList .placeSkeletonBody { align-self: center; padding: 1.25rem 1.4rem; }
+@keyframes placeSkeletonSweep { to { background-position-x: -220%; } }
 .emptyPage { position: static; min-height: 330px; width: 100%; transform: none; box-shadow: none; }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
@@ -178,14 +217,18 @@
 :global(.dark) .searchBox button, :global(.dark) .filterHeading button, :global(.dark) .closeDetails { color: #f7f4ec; background: #233a59; }
 :global(.dark) .searchBox button:hover, :global(.dark) .filterHeading button:hover, :global(.dark) .closeDetails:hover { background: #315071; }
 :global(.dark) .clearFilters { color: #ff8a73; border-color: rgba(255,255,255,.18); background: transparent; }
-:global(.dark) .mapStatusBar > span, :global(.dark) .locationNotice, :global(.dark) .resultsNotice, :global(.dark) .mapStatus, :global(.dark) .emptyState, :global(.dark) .placeDetails { color: #f7f4ec; border-color: rgba(255,255,255,.14); background: rgba(20,36,58,.97); box-shadow: 0 16px 45px rgba(0,0,0,.32); }
+:global(.dark) .mapStatusBar > span, :global(.dark) .locationNotice, :global(.dark) .resultsNotice, :global(.dark) .dataNotice, :global(.dark) .mapStatus, :global(.dark) .emptyState, :global(.dark) .placeDetails { color: #f7f4ec; border-color: rgba(255,255,255,.14); background: rgba(20,36,58,.97); box-shadow: 0 16px 45px rgba(0,0,0,.32); }
 :global(.dark) .mapStatus button, :global(.dark) .emptyState button { color: var(--ink); background: var(--amber); }
 :global(.dark) .detailsMeta strong, :global(.dark) .cardTopline strong { color: #ffd760; }
 :global(.dark) .detailsFooter a { border-color: rgba(255,138,115,.42); color: #ff8a73; background: rgba(233,75,53,.12); }
 :global(.dark) .detailsFooter a:hover { color: #fff; border-color: var(--red); background: var(--red); }
+:global(.dark) .contactLinks a { color: #f7f4ec; border-color: rgba(255,255,255,.25); }
 :global(.dark) .cardFooter button { color: #f7f4ec; border-color: rgba(255,255,255,.42); }
 :global(.dark) .cardFooter button:hover { color: var(--ink); border-color: var(--amber); background: var(--amber); }
+:global(.dark) .loadMore { color: #f7f4ec; border-color: rgba(255,255,255,.42); }
+:global(.dark) .loadMore:hover { color: var(--ink); border-color: var(--amber); background: var(--amber); }
 :global(.dark) .backLink:hover { color: var(--ink); border-color: var(--amber); background: var(--amber); }
+:global(.dark) .placeSkeletonMedia, :global(.dark) .placeSkeletonBody span, :global(.dark) .placeSkeletonBody strong, :global(.dark) .placeSkeletonBody small, :global(.dark) .placeSkeletonBody i { background-image: linear-gradient(100deg, rgba(255,255,255,.07) 20%, rgba(255,255,255,.15) 38%, rgba(255,255,255,.07) 56%); }
 
 @media (max-width: 980px) {
   .controlDeck { grid-template-columns: auto minmax(200px,1fr) auto auto; }
@@ -210,8 +253,7 @@
   .viewToggle button span { display: inline; }
   .locateIcon { grid-row: 1; grid-column: 3; width: 42px; height: 44px; }
   .filterStack { position: absolute; top: calc(100% + .5rem); right: 0; bottom: auto; left: 0; width: auto; max-height: min(58dvh,480px); overflow-y: auto; border-radius: 1.15rem; }
-  .categoryFilters, .areaFilters { width: 100%; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; padding: .1rem .15rem .4rem; overscroll-behavior-x: contain; scroll-behavior: smooth; scrollbar-color: rgba(20,32,51,.3) transparent; scrollbar-width: thin; touch-action: pan-y; cursor: grab; user-select: none; -webkit-overflow-scrolling: touch; }
-  .categoryFilters:active, .areaFilters:active { cursor: grabbing; }
+  .categoryFilters, .areaFilters { width: 100%; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; padding: .1rem .15rem .4rem; overscroll-behavior-x: contain; scroll-behavior: smooth; scrollbar-color: rgba(20,32,51,.3) transparent; scrollbar-width: thin; touch-action: pan-x pan-y; -webkit-overflow-scrolling: touch; }
   .categoryFilters button, .areaFilters button { flex: 0 0 auto; }
   .categoryFilters::-webkit-scrollbar, .areaFilters::-webkit-scrollbar { height: 4px; }
   .categoryFilters::-webkit-scrollbar-thumb, .areaFilters::-webkit-scrollbar-thumb { background: rgba(20,32,51,.3); border-radius: 999px; }
@@ -238,6 +280,7 @@
   .explorer .locateIcon { grid-column: 2; }
   .gridView { grid-template-columns: 1fr; }
   .placeCardList { grid-template-columns: 112px 1fr; }
+  .placeSkeletonList { grid-template-columns: 112px 1fr; }
   .placeCardList > img { min-height: 100%; }
   .placeCardList .cardBody { padding: .9rem; }
   .placeCardList .cardBody > span { display: none; }
@@ -251,6 +294,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .root *, .root *::before, .root *::after { scroll-behavior: auto; transition-duration: .01ms; animation-duration: .01ms; animation-iteration-count: 1; }
+  .placeSkeletonMedia, .placeSkeletonBody span, .placeSkeletonBody strong, .placeSkeletonBody small, .placeSkeletonBody i { animation: none; }
 }
 
 @media (forced-colors: active) {

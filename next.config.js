@@ -4,6 +4,9 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
   reactStrictMode: true,
+  outputFileTracingIncludes: {
+    '/api/explore/*': ['./data/explore/catalog/**/*'],
+  },
 
   // Dev-only: the server binds 0.0.0.0, so localhost / 127.0.0.1 / the LAN IP
   // are distinct origins to Next's cross-origin check for /_next/* assets.
