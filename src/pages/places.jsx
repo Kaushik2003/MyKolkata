@@ -1,5 +1,6 @@
 import Head from 'next/head'
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   FaArrowRight, FaBookOpen, FaCoffee, FaCompass, FaFire, FaLandmark,
@@ -87,6 +88,7 @@ function ExploreResultsSkeleton() {
 }
 
 function Explore() {
+  const router = useRouter()
   const [query, setQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState('All')
   const [liveResults, setLiveResults] = useState(null)
@@ -114,6 +116,22 @@ function Explore() {
       : activeCategory !== 'All'
         ? (displayedItems.length ? `${activeCategory} to explore` : `No ${activeCategory.toLowerCase()} yet`)
         : `${displayedItems.length} Kolkata picks`
+
+  // Hydrate search and category from the URL so links into Explore (from Home,
+  // for example) land on the filter the visitor actually asked for.
+  useEffect(() => {
+    if (!router.isReady) return
+    const { q, category } = router.query
+    const nextQuery = typeof q === 'string' ? q : ''
+    const requested = typeof category === 'string' ? category.toLowerCase() : ''
+    const matched = categories.find((entry) => entry.name.toLowerCase() === requested)
+
+    if (nextQuery) setQuery(nextQuery)
+    if (matched) setActiveCategory(matched.name)
+    if (nextQuery || matched) setSearchStatus('loading')
+    // Runs on first ready render only; later changes come from the controls.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady])
 
   useEffect(() => {
     const text = query.trim()
