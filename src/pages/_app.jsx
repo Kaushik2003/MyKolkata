@@ -1,4 +1,5 @@
 import '../index.css'
+import '../styles/brand-tokens.css'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { ClerkProvider } from '@clerk/nextjs'
@@ -10,7 +11,7 @@ import Navbar from '../components/Navbar'
 function Layout({ children }) {
   const { isAuthenticated } = useAuth()
   const router = useRouter()
-  const isAuthPage = router.pathname === '/' || router.pathname === '/login' || router.pathname === '/signup'
+  const isAuthPage = router.pathname === '/' || router.pathname === '/login' || router.pathname === '/signup' || router.pathname === '/brand-kit'
 
   return (
     <div className="min-h-screen pb-16">
