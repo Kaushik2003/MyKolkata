@@ -8,10 +8,16 @@ const heroAsset = await stat(new URL('../public/explore-hero-v2.webp', import.me
 
 test('Explore hero leads with a useful Kolkata plan and direct map action', () => {
   assert.match(pageSource, /Find your next Kolkata plan\./)
-  assert.match(pageSource, /nearYouHref\(\{ locate: true \}\)/)
+  assert.match(pageSource, /mapHref\(\{ locate: true \}\)/)
   assert.match(pageSource, /Open the live map/)
   assert.doesNotMatch(pageSource, /Tonight’s easy plan|heroPlan|FaClock/)
   assert.doesNotMatch(pageSource, /CAL\s*24/)
+})
+
+test('Explore hands a known location to the map instead of re-asking GPS', () => {
+  assert.match(pageSource, /mapHref\(\{ origin, locate: true \}\)/)
+  assert.match(pageSource, /window\.isSecureContext/)
+  assert.match(pageSource, /timeout: 20000/)
 })
 
 test('Explore hero is the brand banner: a full-bleed photograph, a scrim, content bottom-left', () => {
@@ -29,60 +35,71 @@ test('Explore hero search is the house line input, and one primary button leads'
   assert.equal(pageSource.match(/mk-btn--primary/g)?.length, 1)
 })
 
-test('Explore hero provides desktop-only shortcuts that populate search', () => {
-  assert.match(pageSource, /const heroShortcuts = \[/)
+test('Explore hero shortcuts pick a kind of place rather than typing a word into search', () => {
+  assert.match(pageSource, /const heroShortcuts = exploreCategories\.filter/)
   assert.match(pageSource, /aria-label="Explore shortcuts"/)
-  assert.match(pageSource, /changeQuery\(label\)/)
-  assert.match(pageSource, /searchRef\.current\?\.focus\(\)/)
-  assert.doesNotMatch(pageSource, /onClick=\{\(\) => setActiveCategory\(activeCategory === label/)
+  assert.match(pageSource, /changeCategory\(activeCategory === name \? 'All' : name\)/)
+  assert.doesNotMatch(pageSource, /changeQuery\(label\)/)
   assert.match(stylesSource, /@media \(max-width: 900px\)[\s\S]*\.heroShortcuts\s*\{[^}]*display: none/s)
 })
 
 test('Explore hides the large category section only while a text search is active', () => {
   assert.match(pageSource, /\{!query\.trim\(\) && \(\s*<section className=\{`\$\{styles\.categorySection\}/s)
-  assert.doesNotMatch(pageSource, /\{!isFiltering && \(\s*<section className=\{styles\.categorySection\}/s)
 })
 
-test('Explore category results use a compact truthful result treatment', () => {
-  assert.match(pageSource, /displayedItems\.length \? `\$\{activeCategory\} to explore`/)
+test('categories come from the shared taxonomy, not a page-local list', () => {
+  assert.match(pageSource, /from '@\/lib\/livePlaces'/)
+  assert.match(pageSource, /exploreCategories\.map\(\(category\) =>/)
+  assert.doesNotMatch(pageSource, /exploreData|trendingPlaces|hiddenKolkata|collections|nearbyPlaces/)
+})
+
+test('search and category results are live requests keyed by what was asked', () => {
+  assert.match(pageSource, /function useLivePlaces\(url\)/)
+  assert.match(pageSource, /state\.url !== url \? 'loading' : state\.status/)
+  assert.match(pageSource, /exploreRequest\(\{\s*query: debouncedQuery,/s)
+  assert.match(pageSource, /controller\.abort\(\)/)
+})
+
+test('Explore result grid pages through live results and hands off to the map', () => {
   assert.match(pageSource, /<Card\s/)
   assert.match(stylesSource, /\.categorySectionActive \+ \.resultsSection/)
   assert.match(pageSource, /const RESULT_BATCH_SIZE = 8/)
   assert.match(pageSource, /displayedItems\.slice\(0, visibleResultCount\)/)
-  assert.match(pageSource, /setVisibleResultCount\(\(count\) => count \+ RESULT_BATCH_SIZE\)/)
+  assert.match(pageSource, /setPaging\(\{ url: resultsUrl, count: visibleResultCount \+ RESULT_BATCH_SIZE \}\)/)
   assert.match(pageSource, /Show \{Math\.min\(RESULT_BATCH_SIZE, remainingResultCount\)\} more/)
   assert.match(pageSource, /View all on map/)
+  assert.match(pageSource, /select: item\.id/)
   assert.match(stylesSource, /\.resultActions/)
 })
 
+test('a searched neighbourhood offers to explore around it', () => {
+  assert.match(pageSource, /results\.meta\?\.area/)
+  assert.match(pageSource, /Explore around \{areaAnchor\.name\}/)
+})
+
 test('Explore loads with the alpona line and quiet placeholders — no spinner, no shimmer', () => {
-  assert.match(pageSource, /function ExploreResultsSkeleton\(\)/)
+  assert.match(pageSource, /function ExploreResultsSkeleton\(/)
   assert.match(pageSource, /searchStatus === 'loading' \? \(\s*<>\s*<AlponaLoader/s)
   assert.match(pageSource, /<ExploreResultsSkeleton \/>/)
-  assert.match(pageSource, /!isFiltering && searchStatus === 'idle'/)
-  assert.doesNotMatch(pageSource, /Showing saved Kolkata picks instead/)
   assert.match(stylesSource, /\.resultSkeleton/)
   assert.doesNotMatch(stylesSource, /@keyframes/)
 })
 
-test('editorial cards use curated destinations instead of searching their display titles', () => {
-  assert.match(pageSource, /function guideHref\(item\)/)
-  assert.match(pageSource, /href=\{guideHref\(place\)\}/)
-  assert.match(pageSource, /href=\{guideHref\(lead\)\}/)
-  assert.match(pageSource, /const \[lead, \.\.\.hiddenRest\] = hiddenKolkata/)
-  assert.match(pageSource, /href=\{guideHref\(collection\)\}/)
-  assert.doesNotMatch(pageSource, /nearYouHref\(\{ query: place\.name \}\).*trendingCard/)
+test('the opening rows are live lists around the visitor, closest first', () => {
+  assert.match(pageSource, /function NearbyRow\(\{ category, origin \}\)/)
+  assert.match(pageSource, /const rowCategories = \[/)
+  assert.match(pageSource, /navigator\.permissions\?\.query\(\{ name: 'geolocation' \}\)/)
+  assert.match(pageSource, /permission\.state === 'granted'/)
+  assert.match(pageSource, />\s*See all\s*</)
 })
 
-test('Explore does not claim static recommendations are near the visitor', () => {
-  assert.match(pageSource, /title="Popular around Kolkata"/)
-  assert.match(pageSource, />Find near me</)
-  assert.doesNotMatch(pageSource, /distanceBadge/)
+test('Explore only says "near you" once the visitor has shared where they are', () => {
+  assert.match(pageSource, /origin\.source === 'user' \? 'near you' : 'around central Kolkata'/)
+  assert.match(pageSource, /origin\.source === 'user' \? 'Near you' : 'Around central Kolkata'/)
+  assert.match(pageSource, /if \(origin\.source === 'user' && place\.distance\)/)
 })
 
-test('Explore section titles avoid emoji decoration and Pujo content', () => {
-  assert.match(pageSource, /title="Trending in Kolkata"/)
-  assert.match(pageSource, /title="Hidden Kolkata"/)
+test('Explore copy avoids emoji decoration and Pujo content', () => {
   assert.doesNotMatch(pageSource, /🔥|📍|🤫|🗺️|Pujo|Pandal/i)
 })
 
@@ -94,12 +111,6 @@ test('Explore sets type from the brand families and never from weight or capital
   assert.doesNotMatch(pageSource, /sectionEyebrow|eyebrow=/)
 })
 
-test('Explore keeps its responsive discovery layouts', () => {
-  assert.match(stylesSource, /\.trendingGrid\s*\{[^}]*display: grid/s)
-  assert.match(stylesSource, /@media \(max-width: 640px\)[\s\S]*\.trendingGrid\s*\{[^}]*display: flex/s)
-  assert.match(stylesSource, /scroll-snap-type: x mandatory/)
-})
-
-test('Explore film frames scrim through Bordeaux, never flat black', () => {
-  assert.match(stylesSource, /\.frameScrim\s*\{[^}]*rgba\(38,10,14,/s)
+test('Explore rows bleed to the edge on phones', () => {
+  assert.match(stylesSource, /@media \(max-width: 640px\)[\s\S]*\.rowOffset\s*\{[^}]*margin-inline: calc\(-1 \* var\(--mk-edge\)\)/s)
 })

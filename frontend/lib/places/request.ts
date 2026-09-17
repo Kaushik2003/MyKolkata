@@ -76,7 +76,8 @@ export function parseNearbyQuery(query: Record<string, unknown> = {}) {
     lng: lng as number,
     radiusKm,
     category: parseCategory(query.category),
-    limit: parseLimit(query.limit),
+    /* a map fills with up to 300 markers; lists ask for far fewer */
+    limit: parseLimit(query.limit, 20, 300),
   }
 }
 

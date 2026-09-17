@@ -2,12 +2,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import {
-  allExploreItems, categories, collections, filterExploreItems,
-  hiddenKolkata, nearbyPlaces, trendingPlaces
-} from '@/lib/exploreData'
-import { fetchLivePlaces } from '@/lib/livePlaces'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { KOLKATA, exploreCategories, exploreRequest, fetchLivePlaces, mapHref } from '@/lib/livePlaces'
+import { haversineDistanceKm } from '@/lib/places/geo'
 import { Card } from '@/components/brand/Card'
 import { SectionHead } from '@/components/brand/SectionHead'
 import { Sprig } from '@/components/brand/kolka'
@@ -15,48 +12,57 @@ import { CityIcon, UiIcon } from '@/components/brand/icons'
 import { AlponaLoader } from '@/components/brand/Alpona'
 import styles from '@/styles/Explore.module.css'
 
-const KOLKATA = { lat: 22.5726, lng: 88.3639 }
 const RESULT_BATCH_SIZE = 8
+const ROW_SIZE = 10
+const NEARBY_RADIUS_KM = 3
+const OUTSIDE_KOLKATA_KM = 60
+const CENTRAL_KOLKATA = Object.freeze({ ...KOLKATA, source: 'default' })
 
-/* each category's line icon — an icon with a job, beside its word */
-const categoryIcons = {
-  coffee: 'bhaar',
-  food: 'phuchka',
-  place: 'victoria',
-  culture: 'book',
-  shopping: 'signboard',
-  experience: 'rickshaw'
+/* the live rows the page opens with, closest first */
+const rowCategories = ['cafes', 'food', 'culture', 'outdoors', 'shopping']
+  .map((slug) => exploreCategories.find((category) => category.slug === slug))
+
+/* hero chips pick a kind of place — they don't type a word into search */
+const heroShortcuts = exploreCategories.filter((category) => ['food', 'places', 'culture', 'experiences'].includes(category.slug))
+
+function originPhrase(origin) {
+  return origin.source === 'user' ? 'near you' : 'around central Kolkata'
 }
 
-const heroShortcuts = [
-  { label: 'Food', icon: 'phuchka' },
-  { label: 'Places', icon: 'victoria' },
-  { label: 'Culture', icon: 'book' },
-  { label: 'Experiences', icon: 'rickshaw' }
-]
-
-function nearYouHref({ query, category, view = 'map', guide, locate } = {}) {
-  const params = new URLSearchParams({ view })
-  if (query) params.set('q', query)
-  if (category && category !== 'All') params.set('category', category)
-  if (guide) params.set('guide', guide)
-  if (locate) params.set('locate', '1')
-  return `/near-you?${params}`
+/* links carry the visitor's position, so the map reopens the same list */
+function originParam(origin) {
+  return origin.source === 'user' ? origin : undefined
 }
 
-function guideHref(item) {
-  return nearYouHref({ ...item.destination, guide: item.id })
+/* one live list, keyed by its request — a stale answer never shows as the current one */
+function useLivePlaces(url) {
+  const [state, setState] = useState({ url: null, status: 'idle', places: [], meta: {} })
+  const [attempt, setAttempt] = useState(0)
+
+  useEffect(() => {
+    if (!url) return undefined
+    const controller = new AbortController()
+    fetchLivePlaces(url, { signal: controller.signal })
+      .then(({ places, meta }) => setState({ url, status: 'success', places, meta }))
+      .catch((error) => {
+        if (error.name !== 'AbortError') setState({ url, status: 'error', places: [], meta: {} })
+      })
+    return () => controller.abort()
+  }, [url, attempt])
+
+  const retry = useCallback(() => {
+    setState((current) => ({ ...current, url: null }))
+    setAttempt((value) => value + 1)
+  }, [])
+
+  const status = !url ? 'idle' : state.url !== url ? 'loading' : state.status
+  return { places: state.url === url ? state.places : [], meta: state.url === url ? state.meta : {}, status, retry }
 }
 
-function iconForCategory(name) {
-  const category = categories.find((entry) => entry.name === name)
-  return categoryIcons[category?.icon] || 'howrah'
-}
-
-function ExploreResultsSkeleton() {
+function ExploreResultsSkeleton({ count = RESULT_BATCH_SIZE, className = styles.resultGrid }) {
   return (
-    <div className={styles.resultGrid} aria-hidden="true">
-      {Array.from({ length: RESULT_BATCH_SIZE }, (_, index) => (
+    <div className={className} aria-hidden="true">
+      {Array.from({ length: count }, (_, index) => (
         <div key={index} className={styles.resultSkeleton}>
           <div className={`mk-skel ${styles.skeletonMedia}`} />
           <span className={`mk-skel-line ${styles.skeletonTitle}`} />
@@ -67,105 +73,177 @@ function ExploreResultsSkeleton() {
   )
 }
 
+/* the sub-line already names the area, so the card keeps just the street */
+function shortAddress(place) {
+  const parts = String(place.address || '').split(',').map((part) => part.trim())
+    .filter((part) => part && part !== place.area && !/^kolkata$/i.test(part))
+  return parts.slice(0, 3).join(', ') || null
+}
+
+function placeSub(place, origin) {
+  if (origin.source === 'user' && place.distance) return `${place.distance} away, ${place.area}`
+  return place.area
+}
+
+function NearbyRow({ category, origin }) {
+  const url = exploreRequest({ category: category.name, origin, radiusKm: NEARBY_RADIUS_KM, limit: ROW_SIZE })
+  const { places, status, retry } = useLivePlaces(url)
+  const headingId = `row-${category.slug}`
+
+  return (
+    <section className={styles.rowSection} aria-labelledby={headingId}>
+      <div className={styles.rowHead}>
+        <h3 id={headingId} className={styles.rowTitle}>
+          <CityIcon name={category.icon} size={26} />
+          {category.name}
+        </h3>
+        <Link
+          href={mapHref({ view: 'grid', category: category.name, origin: originParam(origin) })}
+          className="mk-btn mk-btn--text"
+          aria-label={`See all ${category.name.toLowerCase()} ${originPhrase(origin)}`}
+        >
+          See all
+        </Link>
+      </div>
+      {status === 'loading' ? (
+        <ExploreResultsSkeleton count={4} className={`mk-row ${styles.rowOffset}`} />
+      ) : status === 'error' ? (
+        <p className={`mk-note ${styles.rowNote}`} role="status">
+          {category.name} didn&apos;t load.{' '}
+          <button type="button" className="mk-btn mk-btn--text" onClick={retry}>Try again</button>
+        </p>
+      ) : places.length ? (
+        <div className={`mk-row ${styles.rowOffset}`}>
+          {places.map((place) => (
+            <Card
+              key={place.id}
+              href={mapHref({ category: category.name, origin: originParam(origin), select: place.id })}
+              ariaLabel={`Show ${place.name} on the map`}
+              image={place.image}
+              icon={place.icon}
+              fallbackLabel={place.category}
+              title={place.name}
+              sub={placeSub(place, origin)}
+              desc={shortAddress(place)}
+            />
+          ))}
+        </div>
+      ) : (
+        <p className={`mk-caption ${styles.rowNote}`}>No {category.name.toLowerCase()} mapped within {NEARBY_RADIUS_KM} km yet.</p>
+      )}
+    </section>
+  )
+}
+
 function Explore() {
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState('All')
-  const [liveResults, setLiveResults] = useState(null)
-  const [searchStatus, setSearchStatus] = useState('idle')
   const [isComposing, setIsComposing] = useState(false)
-  const [visibleResultCount, setVisibleResultCount] = useState(RESULT_BATCH_SIZE)
-  const [requestVersion, setRequestVersion] = useState(0)
+  const [paging, setPaging] = useState({ url: null, count: RESULT_BATCH_SIZE })
+  const [origin, setOrigin] = useState(CENTRAL_KOLKATA)
+  const [locationState, setLocationState] = useState('idle')
   const searchRef = useRef(null)
-  const isFiltering = Boolean(query.trim()) || activeCategory !== 'All'
-  const filteredItems = useMemo(
-    () => filterExploreItems(allExploreItems, query, activeCategory),
-    [query, activeCategory]
-  )
-  const displayedItems = searchStatus === 'success' && liveResults
-    ? liveResults
-    : !isFiltering && searchStatus === 'idle'
-      ? filteredItems
-      : []
+
+  const typedQuery = query.trim().length >= 2 ? query.trim().slice(0, 120) : ''
+  useEffect(() => {
+    if (isComposing || typedQuery === debouncedQuery) return undefined
+    const timer = window.setTimeout(() => setDebouncedQuery(typedQuery), typedQuery ? 320 : 0)
+    return () => window.clearTimeout(timer)
+  }, [debouncedQuery, isComposing, typedQuery])
+
+  const isFiltering = Boolean(typedQuery) || activeCategory !== 'All'
+  const resultsUrl = debouncedQuery || activeCategory !== 'All'
+    ? exploreRequest({
+      query: debouncedQuery,
+      category: activeCategory,
+      origin,
+      radiusKm: NEARBY_RADIUS_KM,
+      limit: debouncedQuery ? 40 : 48
+    })
+    : null
+  const results = useLivePlaces(resultsUrl)
+  /* a new request pages from the start again */
+  const visibleResultCount = paging.url === resultsUrl ? paging.count : RESULT_BATCH_SIZE
+  const searchStatus = isComposing || typedQuery !== debouncedQuery ? 'loading' : results.status
+  const displayedItems = searchStatus === 'success' ? results.places : []
   const visibleResults = displayedItems.slice(0, visibleResultCount)
   const remainingResultCount = Math.max(0, displayedItems.length - visibleResults.length)
+  const areaAnchor = searchStatus === 'success' && debouncedQuery ? results.meta?.area : null
   const resultsTitle = searchStatus === 'loading'
-    ? 'Finding Kolkata picks'
-    : query.trim()
-      ? (displayedItems.length ? `Results for “${query.trim()}”` : 'Nothing matches that yet')
-      : activeCategory !== 'All'
-        ? (displayedItems.length ? `${activeCategory} to explore` : `No ${activeCategory.toLowerCase()} yet`)
-        : `${displayedItems.length} Kolkata picks`
+    ? 'Finding Kolkata places'
+    : debouncedQuery
+      ? (displayedItems.length ? `Results for “${debouncedQuery}”` : `Nothing matches “${debouncedQuery}” yet`)
+      : (displayedItems.length ? `${activeCategory} ${originPhrase(origin)}` : `No ${activeCategory.toLowerCase()} ${originPhrase(origin)} yet`)
 
-  useEffect(() => {
-    const text = query.trim()
-    if (!isFiltering || isComposing || (text && text.length < 2)) {
-      setLiveResults(null)
-      setSearchStatus('idle')
-      return undefined
+  const requestLocation = useCallback(({ quiet = false } = {}) => {
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      if (!quiet) setLocationState('unsupported')
+      return
     }
+    if (!navigator.geolocation) {
+      if (!quiet) setLocationState('unsupported')
+      return
+    }
+    setLocationState('loading')
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const position = { lat: coords.latitude, lng: coords.longitude }
+        if (haversineDistanceKm(KOLKATA, position) > OUTSIDE_KOLKATA_KM) {
+          setLocationState('far')
+          return
+        }
+        setOrigin({ ...position, source: 'user' })
+        setLocationState('ready')
+      },
+      (error) => {
+        if (quiet) {
+          setLocationState('idle')
+          return
+        }
+        if (error?.code === 3) setLocationState('timeout')
+        else if (error?.code === 1) setLocationState('denied')
+        else setLocationState('denied')
+      },
+      /* longer timeout for indoor / cellular GPS; cache a recent fix briefly */
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 120000 }
+    )
+  }, [])
 
-    const controller = new AbortController()
-    const timer = window.setTimeout(async () => {
-      setSearchStatus('loading')
-      const params = new URLSearchParams({
-        lat: String(KOLKATA.lat),
-        lng: String(KOLKATA.lng),
-        limit: '20'
+  /* if the visitor already shares their location, open on what's near them */
+  useEffect(() => {
+    let cancelled = false
+    navigator.permissions?.query({ name: 'geolocation' })
+      .then((permission) => {
+        if (!cancelled && permission.state === 'granted') requestLocation({ quiet: true })
       })
-      if (activeCategory !== 'All') params.set('category', activeCategory)
-      if (text) params.set('q', text)
-
-      try {
-        const endpoint = text ? '/api/explore/search' : '/api/explore/nearby'
-        const result = await fetchLivePlaces(`${endpoint}?${params}`, { signal: controller.signal })
-        setLiveResults(result.places)
-        setSearchStatus('success')
-      } catch (error) {
-        if (error.name === 'AbortError') return
-        setLiveResults(null)
-        setSearchStatus('error')
-      }
-    }, 300)
-
-    return () => {
-      window.clearTimeout(timer)
-      controller.abort()
-    }
-  }, [activeCategory, isComposing, isFiltering, query, requestVersion])
-
-  useEffect(() => {
-    setVisibleResultCount(RESULT_BATCH_SIZE)
-  }, [activeCategory, query])
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [requestLocation])
 
   const clearSearch = () => {
     setQuery('')
-    setLiveResults(null)
-    setSearchStatus(activeCategory === 'All' ? 'idle' : 'loading')
+    setDebouncedQuery('')
     searchRef.current?.focus()
   }
 
   const resetDiscovery = () => {
     setQuery('')
+    setDebouncedQuery('')
     setActiveCategory('All')
-    setLiveResults(null)
-    setSearchStatus('idle')
     searchRef.current?.focus()
   }
 
-  const changeQuery = (nextQuery) => {
-    setQuery(nextQuery)
-    setLiveResults(null)
-    const text = nextQuery.trim()
-    setSearchStatus(activeCategory !== 'All' || text.length >= 2 ? 'loading' : 'idle')
-  }
+  const changeQuery = (nextQuery) => setQuery(nextQuery)
 
-  const changeCategory = (nextCategory) => {
-    setActiveCategory(nextCategory)
-    setLiveResults(null)
-    setSearchStatus(nextCategory !== 'All' || query.trim().length >= 2 ? 'loading' : 'idle')
-  }
+  const changeCategory = (nextCategory) => setActiveCategory(nextCategory)
 
-  const [lead, ...hiddenRest] = hiddenKolkata
+  const locationNote = {
+    denied: 'Location access wasn’t available, so these are around central Kolkata.',
+    timeout: 'Finding you took too long, so these are around central Kolkata. Try again.',
+    unsupported: 'This browser can’t share its location, so these are around central Kolkata.',
+    far: 'You’re outside Kolkata, so these are around the city centre.'
+  }[locationState]
 
   return (
     <main className={`mk-page ${styles.root}`}>
@@ -202,6 +280,7 @@ function Explore() {
                   }}
                   placeholder="Search a café, a dish, a para"
                   autoComplete="off"
+                  enterKeyHint="search"
                 />
                 {query && (
                   <button type="button" className="mk-icon-btn mk-icon-btn--bare" onClick={clearSearch} aria-label="Clear search">
@@ -209,25 +288,22 @@ function Explore() {
                   </button>
                 )}
               </form>
-              <Link href={nearYouHref({ locate: true })} className="mk-btn mk-btn--primary">
+              <Link href={mapHref({ locate: true })} className="mk-btn mk-btn--primary">
                 Open the live map <span className="mk-btn-arrow" aria-hidden="true">→</span>
               </Link>
             </div>
 
             <div className={`mk-chips ${styles.heroShortcuts}`} role="group" aria-label="Explore shortcuts">
-              {heroShortcuts.map(({ label, icon }) => (
+              {heroShortcuts.map(({ name, icon }) => (
                 <button
-                  key={label}
+                  key={name}
                   type="button"
                   className="mk-chip"
-                  aria-pressed={query.trim().toLowerCase() === label.toLowerCase()}
-                  onClick={() => {
-                    changeQuery(label)
-                    searchRef.current?.focus()
-                  }}
+                  aria-pressed={activeCategory === name}
+                  onClick={() => changeCategory(activeCategory === name ? 'All' : name)}
                 >
                   <CityIcon name={icon} size={20} />
-                  {label}
+                  {name}
                 </button>
               ))}
             </div>
@@ -240,17 +316,17 @@ function Explore() {
           <section className={`${styles.categorySection} ${activeCategory !== 'All' ? styles.categorySectionActive : ''}`} aria-labelledby="category-title">
             <SectionHead id="category-title" title="Explore by category" />
             <div className={styles.categoryGrid}>
-              {categories.map((category) => {
+              {exploreCategories.map((category) => {
                 const isActive = activeCategory === category.name
                 return (
                   <button
-                    key={category.name}
+                    key={category.slug}
                     type="button"
                     className={`mk-chip ${styles.categoryButton}`}
                     aria-pressed={isActive}
                     onClick={() => changeCategory(isActive ? 'All' : category.name)}
                   >
-                    <CityIcon name={categoryIcons[category.icon]} size={24} />
+                    <CityIcon name={category.icon} size={24} />
                     <span>{category.name}</span>
                   </button>
                 )
@@ -267,8 +343,16 @@ function Explore() {
               action={<button type="button" className="mk-btn mk-btn--text" onClick={resetDiscovery}>Clear filters</button>}
             />
             <p className="sr-only" aria-live="polite">
-              {searchStatus === 'loading' ? 'Searching live Kolkata places' : `${displayedItems.length} results found`}
+              {searchStatus === 'loading' ? 'Searching Kolkata places' : `${displayedItems.length} results found`}
             </p>
+            {areaAnchor && (
+              <Link
+                href={mapHref({ origin: { lat: areaAnchor.latitude, lng: areaAnchor.longitude }, label: areaAnchor.name })}
+                className={`mk-btn mk-btn--secondary ${styles.anchorLink}`}
+              >
+                Explore around {areaAnchor.name}
+              </Link>
+            )}
             {searchStatus === 'loading' ? (
               <>
                 <AlponaLoader label="Looking across the city" className={styles.loader} />
@@ -276,16 +360,9 @@ function Explore() {
               </>
             ) : searchStatus === 'error' ? (
               <div className={`mk-panel mk-empty ${styles.state}`} role="status">
-                <h3 className="mk-h3">Fresh Kolkata places didn&apos;t load.</h3>
+                <h3 className="mk-h3">Kolkata places didn&apos;t load.</h3>
                 <p className="mk-body">Check your connection, then try the search again.</p>
-                <button
-                  type="button"
-                  className="mk-btn mk-btn--secondary"
-                  onClick={() => {
-                    setSearchStatus('loading')
-                    setRequestVersion((version) => version + 1)
-                  }}
-                >
+                <button type="button" className="mk-btn mk-btn--secondary" onClick={results.retry}>
                   Try again
                 </button>
               </div>
@@ -295,14 +372,14 @@ function Explore() {
                   {visibleResults.map((item) => (
                     <Card
                       key={item.id}
-                      href={nearYouHref({ query: item.name })}
+                      href={mapHref({ query: debouncedQuery, category: activeCategory, origin: originParam(origin), select: item.id })}
                       ariaLabel={`Show ${item.name} on the map`}
                       image={item.image}
-                      icon={iconForCategory(item.category)}
-                      fallbackLabel={item.category || 'Kolkata place'}
+                      icon={item.icon}
+                      fallbackLabel={item.category}
                       title={item.name}
-                      sub={item.area || item.count}
-                      desc={item.category}
+                      sub={placeSub(item, origin)}
+                      desc={shortAddress(item)}
                     />
                   ))}
                 </div>
@@ -311,13 +388,13 @@ function Explore() {
                     <button
                       type="button"
                       className="mk-btn mk-btn--secondary"
-                      onClick={() => setVisibleResultCount((count) => count + RESULT_BATCH_SIZE)}
+                      onClick={() => setPaging({ url: resultsUrl, count: visibleResultCount + RESULT_BATCH_SIZE })}
                     >
                       Show {Math.min(RESULT_BATCH_SIZE, remainingResultCount)} more
                     </button>
                   )}
                   <Link
-                    href={nearYouHref({ query: query.trim(), category: activeCategory })}
+                    href={mapHref({ query: debouncedQuery, category: activeCategory, origin: originParam(origin) })}
                     className="mk-btn mk-btn--text"
                   >
                     View all on map
@@ -326,105 +403,40 @@ function Explore() {
               </>
             ) : (
               <div className={`mk-panel mk-empty ${styles.state}`}>
-                <h3 className="mk-h3">Nothing matches that yet.</h3>
-                <p className="mk-body">Try another neighbourhood, dish or kind of plan.</p>
-                <button type="button" className="mk-btn mk-btn--secondary" onClick={resetDiscovery}>Show all picks</button>
+                <h3 className="mk-h3">{debouncedQuery ? 'Nothing in Kolkata matches that yet.' : `No ${activeCategory.toLowerCase()} mapped close by.`}</h3>
+                <p className="mk-body">{debouncedQuery ? 'Check the spelling, or search a para, a street or a landmark.' : 'Open the map and look a little further out.'}</p>
+                <button type="button" className="mk-btn mk-btn--secondary" onClick={resetDiscovery}>Start over</button>
               </div>
             )}
           </section>
         )}
 
         {!isFiltering && (
-          <>
-            <section className={styles.section} aria-labelledby="trending-title">
-              <SectionHead id="trending-title" title="Trending in Kolkata" lede="What the city is making time for this week." />
-              <div className={styles.trendingGrid}>
-                {trendingPlaces.map((place, index) => (
-                  <Link key={place.id} href={guideHref(place)} className={`${styles.frame} ${index === 0 ? styles.trendingLead : ''}`} aria-label={`Open the ${place.name} guide`}>
-                    <img className={styles.frameImg} src={place.image} alt="" width="1000" height="740" />
-                    <div className={styles.frameScrim} aria-hidden="true" />
-                    <div className={styles.frameContent}>
-                      <p className={styles.frameKicker}>{place.eyebrow}</p>
-                      <h3 className={styles.frameTitle}>{place.name}</h3>
-                      <p className={styles.frameDesc}>{place.description}</p>
-                      <p className={styles.frameMeta}>
-                        <span>{place.area}</span>
-                        <span className={styles.frameTime}>{place.duration}</span>
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-
-            <section id="near-you" className={styles.section} aria-labelledby="near-title">
-              <SectionHead
-                id="near-title"
-                title="Popular around Kolkata"
-                lede="Good places to start, wherever you are in the city."
-                action={<Link href={nearYouHref({ locate: true })} className="mk-btn mk-btn--text">Find near me</Link>}
-              />
-              <div className={`mk-row ${styles.rowOffset}`}>
-                {nearbyPlaces.slice(0, 5).map((place) => (
-                  <Card
-                    key={place.id}
-                    href={nearYouHref({ query: place.name })}
-                    ariaLabel={`Explore ${place.name} on the map`}
-                    image={place.image}
-                    icon={iconForCategory(place.category)}
-                    title={place.name}
-                    sub={place.area}
-                    desc={`${place.category}, rated ${place.rating}`}
-                  />
-                ))}
-              </div>
-            </section>
-
-            <section className={styles.section} aria-labelledby="hidden-title">
-              <SectionHead id="hidden-title" title="Hidden Kolkata" lede="For the curious, and the ones who take the long way." />
-              <div className={styles.hiddenGrid}>
-                <Link href={guideHref(lead)} className={`${styles.frame} ${styles.hiddenLead}`} aria-label={`Open ${lead.name}`}>
-                  <img className={styles.frameImg} src={lead.image} alt="" width="900" height="620" />
-                  <div className={styles.frameScrim} aria-hidden="true" />
-                  <div className={styles.frameContent}>
-                    <p className={styles.frameKicker}>{lead.note}</p>
-                    <h3 className={styles.frameTitle}>{lead.name}</h3>
-                    <p className={styles.frameDesc}>{lead.description}</p>
-                  </div>
-                </Link>
-                <div className={styles.hiddenList}>
-                  {hiddenRest.map((place) => (
-                    <Link key={place.id} href={guideHref(place)} className={styles.hiddenRow} aria-label={`Open ${place.name}`}>
-                      <span className={styles.hiddenThumb}>
-                        <img src={place.image} alt="" width="260" height="220" />
-                      </span>
-                      <span className={styles.hiddenText}>
-                        <span className="mk-meta">{place.area}</span>
-                        <span className={styles.hiddenTitle}>{place.name}</span>
-                        <span className={styles.hiddenNote}>{place.note}</span>
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            <section className={styles.section} aria-labelledby="collections-title">
-              <SectionHead id="collections-title" title="Made for wandering" lede="Collections to follow on a slow afternoon." />
-              <div className={styles.collectionGrid}>
-                {collections.map((collection) => (
-                  <Link key={collection.id} href={guideHref(collection)} className={`${styles.frame} ${styles.collectionCard}`} aria-label={`Open the ${collection.name} collection`}>
-                    <img className={styles.frameImg} src={collection.image} alt="" width="720" height="420" />
-                    <div className={styles.frameScrim} aria-hidden="true" />
-                    <div className={styles.frameContent}>
-                      <h3 className={styles.collectionTitle}>{collection.name}</h3>
-                      <p className={styles.frameMeta}><span>{collection.count}</span></p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          </>
+          <section id="near-you" className={styles.section} aria-labelledby="near-title">
+            <SectionHead
+              id="near-title"
+              title={origin.source === 'user' ? 'Near you' : 'Around central Kolkata'}
+              lede={origin.source === 'user'
+                ? 'Live from the map, closest first.'
+                : 'Live from the map. Share your location to start from where you are.'}
+              action={origin.source === 'user' ? (
+                <Link href={mapHref({ origin, locate: true })} className="mk-btn mk-btn--text">See them on the map</Link>
+              ) : (
+                <button
+                  type="button"
+                  className="mk-btn mk-btn--text"
+                  onClick={() => requestLocation()}
+                  disabled={locationState === 'loading'}
+                >
+                  {locationState === 'loading' ? 'Finding you…' : 'Use my location'}
+                </button>
+              )}
+            />
+            {locationNote && <p className={`mk-note ${styles.locationNote}`} role="status">{locationNote}</p>}
+            {rowCategories.map((category) => (
+              <NearbyRow key={category.slug} category={category} origin={origin} />
+            ))}
+          </section>
         )}
       </div>
     </main>
