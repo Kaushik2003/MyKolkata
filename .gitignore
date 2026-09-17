@@ -1,11 +1,13 @@
 __pycache__/
 node_modules/
-*.pyc 
+*.pyc
 .env*
 !.env.example
 
-backend/node_modules/
-backend/__pycache__/
+frontend/node_modules/
+frontend/.next/
+frontend/.env*
+!frontend/.env.example
 
 venv/
 dist/
