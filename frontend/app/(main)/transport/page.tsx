@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { SectionHead } from '@/components/brand/SectionHead'
 import { CityIcon } from '@/components/brand/icons'
+import { requireUser } from '@/lib/auth'
 
 export const metadata: Metadata = { title: 'Transport' }
 
@@ -11,7 +12,9 @@ const MODES = [
   { icon: 'boat', name: 'Ferries', note: 'Crossings on the Hooghly, ghat to ghat' },
 ] as const
 
-function Transport() {
+async function Transport() {
+  await requireUser()
+
   return (
     <main className="mk-page mk-page-top">
       <div className="mk-wrap">

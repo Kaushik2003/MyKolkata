@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { access, readFile } from 'node:fs/promises'
+import { access, readdir, readFile } from 'node:fs/promises'
 import test from 'node:test'
 
 const readSource = (relativePath) =>
@@ -56,4 +56,23 @@ test('Clerk is dressed in the brand once, for every auth component', async () =>
   assert.match(appearance, /colorBackground: '#141819'/)
   assert.match(appearance, /fontWeight: \{ normal: 400, medium: 400, semibold: 400, bold: 400 \}/)
   assert.doesNotMatch(appearance, /!'/)
+})
+
+test('Clerk components are sized through appearance, never structural .cl-* CSS', async () => {
+  const stylesheets = (await Promise.all(['app/', 'styles/'].map(async (dir) =>
+    (await readdir(new URL(`../${dir}`, import.meta.url), { recursive: true }))
+      .filter((entry) => entry.endsWith('.css'))
+      .map((entry) => `${dir}${entry}`)))).flat()
+  assert.ok(stylesheets.includes('styles/auth.css'))
+
+  for (const sheet of stylesheets) {
+    const css = (await readSource(sheet)).replace(/\/\*[\s\S]*?\*\//g, '')
+    assert.doesNotMatch(css, /\.cl-[\w-]+/, `${sheet} targets Clerk's internal DOM`)
+  }
+})
+
+test('the image optimizer is not an open proxy', async () => {
+  const config = await readSource('next.config.ts')
+
+  assert.doesNotMatch(config, /hostname:\s*['"]\*\*?['"]/)
 })

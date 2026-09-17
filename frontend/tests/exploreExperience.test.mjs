@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFile, stat } from 'node:fs/promises'
 import test from 'node:test'
 
-const pageSource = await readFile(new URL('../app/(main)/places/page.tsx', import.meta.url), 'utf8')
+const pageSource = await readFile(new URL('../app/(main)/places/PlacesClient.tsx', import.meta.url), 'utf8')
 const stylesSource = await readFile(new URL('../styles/Explore.module.css', import.meta.url), 'utf8')
 const heroAsset = await stat(new URL('../public/explore-hero-v2.webp', import.meta.url))
 
