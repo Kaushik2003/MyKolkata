@@ -1,0 +1,24 @@
+/* Contribute — communities, and a place to write. */
+
+.section { padding-top: clamp(56px, 8vw, 96px); }
+.gap { margin-top: var(--mk-5); }
+
+.communities {
+  list-style: none; margin: var(--mk-6) 0 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--mk-4);
+}
+.community {
+  display: grid; gap: var(--mk-1); height: 100%; padding: var(--mk-5);
+  border: 1px solid rgba(242, 241, 237, 0.08); border-radius: var(--mk-r-md);
+  background: var(--mk-ink); box-shadow: var(--mk-shadow-card); color: var(--mk-pearl); text-decoration: none;
+  transition: border-color var(--mk-t-hover) var(--mk-ease-in-out), background-color var(--mk-t-hover) var(--mk-ease-in-out);
+}
+.community:hover, .community:focus-visible { border-color: rgba(242, 241, 237, 0.22); background: var(--mk-slate); }
+.communityName { font-family: var(--mk-display); font-size: 22px; line-height: 1.2; letter-spacing: -0.01em; color: var(--mk-white); }
+.communityDesc { font-size: 15px; line-height: 1.55; color: var(--mk-pearl); }
+.communityPlatform { margin-top: var(--mk-3); font-size: 13px; letter-spacing: 0.02em; color: var(--mk-ash); transition: color var(--mk-t-hover) var(--mk-ease-in-out); }
+.community:hover .communityPlatform, .community:focus-visible .communityPlatform { color: var(--mk-taxi); }
+
+.storiesHead { display: flex; align-items: center; justify-content: space-between; gap: var(--mk-4); flex-wrap: wrap; }
+.form { margin-top: var(--mk-6); max-width: 720px; display: grid; gap: var(--mk-5); }
+.empty { margin-top: var(--mk-6); max-width: 720px; }

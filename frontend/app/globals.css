@@ -1,0 +1,103 @@
+@import "tailwindcss";
+@import "../styles/brand-tokens.css";
+@import "../styles/brand.css";
+@import "../styles/notchbar.css";
+
+/*
+ * The Tailwind theme is the brand, and nothing else. Resetting each namespace
+ * means an off-brand utility — bg-gray-100, text-orange-600, font-bold,
+ * rounded-2xl — generates no CSS at all, rather than quietly shipping.
+ * Spec: /design.md   Live reference: /brand-kit
+ */
+@theme {
+  --color-*: initial;
+  --color-obsidian: #0d1012;
+  --color-ink: #141819;
+  --color-slate: #1c2225;
+  --color-bordeaux: #3f0d12;
+  --color-bordeaux-deep: #260a0e;
+  --color-crimson-depth: #710014;
+  --color-ruby: #98111e;
+  --color-crimson: #d72638;
+  --color-taxi: #f2b33d;
+  --color-ash: #afa2a0;
+  --color-pearl: #f2f1ed;
+  --color-pop: #fcfbf8;
+  --color-blush: #fbe4e3;
+
+  --font-*: initial;
+  --font-display: 'Clear Sans Display', 'Noto Sans Bengali', system-ui, sans-serif;
+  --font-text: 'Clear Sans Text', 'Noto Sans Bengali', system-ui, sans-serif;
+  --font-bengali: 'Noto Sans Bengali', system-ui, sans-serif;
+
+  /* Clear Sans ships Regular only. There is no bold. §4.2 */
+  --font-weight-*: initial;
+  --font-weight-normal: 400;
+
+  --radius-*: initial;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  --shadow-*: initial;
+  --shadow-card: 0 18px 40px -20px rgba(0, 0, 0, 0.85);
+  --shadow-panel: 0 28px 64px -24px rgba(0, 0, 0, 0.9);
+
+  --ease-*: initial;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background-color: var(--mk-obsidian);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    min-height: 100svh;
+    background: var(--mk-ground);
+    background-color: var(--mk-obsidian);
+    color: var(--mk-pearl);
+    font-family: var(--mk-text);
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.65;
+    letter-spacing: 0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
+  }
+
+  /* the browser would synthesise a fake bold on a Regular-only face */
+  b, strong, th, optgroup { font-weight: 400; }
+
+  /* Bengali is never letter-spaced — it breaks the matra */
+  [lang="bn"] { letter-spacing: 0; }
+
+  :focus-visible {
+    outline: 2px solid var(--mk-crimson);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: rgba(215, 38, 56, 0.4);
+    color: var(--mk-white);
+  }
+
+  @media (max-width: 767px) {
+    :root { --mk-nav: 52px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

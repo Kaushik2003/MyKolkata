@@ -1,0 +1,55 @@
+/* Experiences — /tinder. One card at a time, dragged left or right. */
+
+.stage {
+  position: fixed; inset: 0; z-index: 0; overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--mk-5);
+  padding: calc(var(--mk-nav) + 16px) var(--mk-edge) var(--mk-6);
+}
+
+.intro { width: min(380px, 100%); display: grid; gap: var(--mk-2); }
+
+.card {
+  position: relative; z-index: 50; width: min(380px, 100%); max-height: min(600px, calc(100svh - var(--mk-nav) - 150px));
+  display: flex; flex-direction: column; overflow: hidden; cursor: grab; user-select: none;
+  border: 1px solid rgba(242, 241, 237, 0.08); border-radius: var(--mk-r-lg);
+  background: var(--mk-ink); box-shadow: var(--mk-shadow-panel);
+}
+.card:active { cursor: grabbing; }
+
+.cardMedia { position: relative; flex: none; aspect-ratio: 16 / 10; background: var(--mk-slate); }
+.cardMedia img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none;
+  filter: saturate(1.06) contrast(1.18) brightness(1.05);
+}
+.cardScrim { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(20, 24, 25, 0.9), rgba(38, 10, 14, 0.14) 40%, rgba(20, 24, 25, 0) 64%); }
+
+.cardBody { min-height: 0; overflow-y: auto; padding: var(--mk-2) var(--mk-5) var(--mk-5); }
+.cardTitle { margin: 0; font-family: var(--mk-display); font-weight: 400; font-size: 30px; line-height: 1.1; letter-spacing: -0.02em; color: var(--mk-white); }
+.cardAge { margin: var(--mk-1) 0 0; font-size: 13px; letter-spacing: 0.02em; color: var(--mk-ash); }
+.cardBio { margin: var(--mk-4) 0 0; font-size: 16px; line-height: 1.6; color: var(--mk-pearl); }
+.cardBio button { min-height: 0; padding: 0; }
+
+.ratings {
+  margin-top: var(--mk-5); padding-top: var(--mk-4); display: flex; flex-wrap: wrap; gap: var(--mk-2) var(--mk-6);
+  border-top: 1px solid rgba(242, 241, 237, 0.08); font-size: 13px; letter-spacing: 0.02em; color: var(--mk-ash);
+}
+.ratingValue { color: var(--mk-white); font-variant-numeric: tabular-nums; }
+
+/* the drag hints — a word on each edge; the warm side passes through Bordeaux */
+.hint {
+  position: fixed; top: 0; bottom: 0; z-index: 40; width: 34%; pointer-events: none;
+  display: flex; align-items: center; padding: 0 var(--mk-edge);
+  font-family: var(--mk-display); font-size: clamp(22px, 3vw, 34px); letter-spacing: -0.02em; color: var(--mk-white);
+}
+.hintLeft { left: 0; justify-content: flex-start; background: linear-gradient(90deg, rgba(10, 13, 14, 0.8), rgba(10, 13, 14, 0)); }
+.hintRight { right: 0; justify-content: flex-end; background: linear-gradient(270deg, rgba(113, 0, 20, 0.3), rgba(38, 10, 14, 0)); }
+
+.rating { display: flex; width: 100%; margin: var(--mk-5) 0 var(--mk-5); }
+.rating button { flex: 1; min-height: 44px; font-size: 16px; font-variant-numeric: tabular-nums; }
+
+.modalActions { margin-top: var(--mk-5); display: flex; flex-wrap: wrap; gap: var(--mk-3); }
+
+@media (max-width: 480px) {
+  .intro p { display: none; }
+  .cardTitle { font-size: 25px; }
+}

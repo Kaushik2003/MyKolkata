@@ -1,0 +1,56 @@
+/* Sign in and create account. Built from styles/brand.css primitives. */
+
+.mk-auth {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  min-height: 100svh;
+}
+.mk-auth--loading { display: flex; align-items: center; padding: 0 var(--mk-edge); }
+
+.mk-auth-main {
+  display: flex; align-items: center;
+  padding: clamp(40px, 7vw, 96px) var(--mk-edge);
+  background:
+    radial-gradient(700px 460px at 0% 100%, rgba(19, 42, 46, 0.5), transparent 62%),
+    var(--mk-obsidian);
+}
+.mk-auth-column { width: 100%; max-width: 440px; }
+
+.mk-auth-lockup { display: flex; align-items: center; gap: var(--mk-4); }
+.mk-auth-latin {
+  margin: 0; font-family: var(--mk-display); font-weight: 400; color: var(--mk-white);
+  font-size: 26px; letter-spacing: 0.14em; line-height: 1.1;
+}
+/* the wordmark's Bengali — a whisper under the Latin, in Ash */
+.mk-auth-bn {
+  margin: 4px 0 0; font-family: var(--mk-bengali); font-variation-settings: 'wght' 500;
+  font-size: 14px; line-height: 1.5; color: var(--mk-ash);
+}
+.mk-auth-lede { margin: var(--mk-6) 0 var(--mk-6); max-width: 36ch; }
+
+.mk-auth-switch { margin-bottom: var(--mk-5); }
+.mk-auth-form { width: 100%; }
+.mk-auth-form .cl-rootBox, .mk-auth-form .cl-cardBox { width: 100%; max-width: 100%; }
+.mk-auth-foot { margin-top: var(--mk-5); display: flex; align-items: center; gap: var(--mk-3); flex-wrap: wrap; }
+
+.mk-auth-photo { position: relative; margin: 0; overflow: hidden; background: var(--mk-ink); }
+.mk-auth-photo img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 40%;
+  filter: saturate(0.96) contrast(1.12);
+}
+/* black passes through Bordeaux on its way down — never flat alpha over the image */
+.mk-auth-scrim {
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(0deg, rgba(10,13,14,0.86) 0%, rgba(38,10,14,0.26) 36%, rgba(38,10,14,0) 60%),
+    linear-gradient(90deg, rgba(13,16,18,0.55) 0%, rgba(13,16,18,0) 30%),
+    linear-gradient(0deg, rgba(19,42,46,0.22), rgba(19,42,46,0.22));
+}
+.mk-auth-caption { position: absolute; left: 0; bottom: 0; padding: clamp(24px, 4vw, 56px); max-width: 560px; }
+
+@media (max-width: 900px) {
+  .mk-auth { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .mk-auth-photo { order: -1; min-width: 0; height: clamp(200px, 52vw, 360px); }
+  .mk-auth-caption { display: none; }
+  .mk-auth-main { align-items: flex-start; padding-top: var(--mk-7); }
+}

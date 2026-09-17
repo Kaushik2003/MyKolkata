@@ -1,0 +1,111 @@
+/*
+ * My Kolkata — brand tokens
+ * Spec: /design.md   Live reference: /brand-kit
+ *
+ * This file is intentionally inert: it declares @font-face and :root custom
+ * properties only. No element selectors, so it cannot affect existing pages.
+ */
+
+/* ---------------------------------------------------------------- fonts -- */
+
+@font-face {
+  font-family: 'Clear Sans Display';
+  src: url('/fonts/clear-sans-display.woff2') format('woff2');
+  font-weight: 400;           /* Regular only — see design.md §4.2 */
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Clear Sans Text';
+  src: url('/fonts/clear-sans-text.woff2') format('woff2');
+  font-weight: 400;           /* Regular only — never synthesise bold */
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Noto Sans Bengali';
+  src: url('/fonts/noto-sans-bengali-variable.woff2') format('woff2-variations');
+  font-weight: 100 900;       /* variable wght axis */
+  font-stretch: 62.5% 100%;   /* variable wdth axis */
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0964-0965, U+0980-09FF, U+200C-200D, U+20B9, U+25CC;
+}
+
+/* -------------------------------------------------------------- tokens -- */
+
+:root {
+  /* colour — the rich black scale, design.md §3.1
+     Cool-tinted and layered. A flat #161616 kills everything sitting on it:
+     whites go grey, reds go muddy, cards stop reading as objects. */
+  --mk-obsidian: #0d1012;         /* base canvas */
+  --mk-ink: #141819;              /* surface 1 — cards, panels */
+  --mk-slate: #1c2225;            /* surface 2 — elevated, hover */
+
+  --mk-bordeaux: #3f0d12;         /* warm surface */
+  --mk-bordeaux-deep: #260a0e;    /* card surface on a red band — never black-on-red */
+  --mk-crimson-depth: #710014;
+  --mk-ruby: #98111e;
+  --mk-crimson: #d72638;          /* the action colour — see the budget, §3.5 */
+
+  --mk-taxi: #f2b33d;             /* Kolkata yellow — the taxi, the protima. §3.7 */
+
+  --mk-ash: #afa2a0;              /* muted UI text */
+  --mk-sand: #b38f6f;             /* photography / illustration ONLY, never UI text */
+  --mk-pearl: #f2f1ed;            /* body text */
+  --mk-white: #fcfbf8;            /* the pop — display, numerals, card titles */
+  --mk-blush: #fbe4e3;
+
+  /* the grade — shadows and gradients only, never a fill. §3.2 */
+  --mk-monsoon: #132a2e;
+
+  /* type — Bengali listed after Latin so Bengali glyphs fall through to Noto */
+  --mk-display: 'Clear Sans Display', 'Noto Sans Bengali', system-ui, sans-serif;
+  --mk-text: 'Clear Sans Text', 'Noto Sans Bengali', system-ui, sans-serif;
+  --mk-bengali: 'Noto Sans Bengali', system-ui, sans-serif;
+
+  /* space */
+  --mk-1: 4px;
+  --mk-2: 8px;
+  --mk-3: 12px;
+  --mk-4: 16px;
+  --mk-5: 24px;
+  --mk-6: 32px;
+  --mk-7: 48px;
+  --mk-8: 64px;
+  --mk-9: 96px;
+  --mk-10: 128px;
+  --mk-11: 160px;
+
+  /* layout — outer margin 20 → 80px (§8.2), and the clearance under the notch bar */
+  --mk-edge: clamp(20px, 6vw, 80px);
+  --mk-nav: 64px;
+
+  /* radius — encodes role, §7.5 */
+  --mk-r-sm: 8px;
+  --mk-r-md: 12px;
+  --mk-r-lg: 20px;
+  --mk-r-xl: 28px;
+
+  /* motion */
+  --mk-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --mk-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --mk-ease-draw: cubic-bezier(0.32, 0.72, 0, 1);
+  --mk-t-fast: 120ms;
+  --mk-t-hover: 200ms;
+  --mk-t-reveal: 320ms;
+  --mk-t-bloom: 1300ms;
+  --mk-t-band: 700ms;
+
+  /* elevation — cold shadows, never grey */
+  --mk-shadow-card: 0 18px 40px -20px rgba(0, 0, 0, 0.85);
+  --mk-shadow-panel: 0 28px 64px -24px rgba(0, 0, 0, 0.9);
+
+  /* the house ground */
+  --mk-ground:
+    radial-gradient(1100px 560px at 78% 6%, rgba(152, 17, 30, 0.13), transparent 62%),
+    radial-gradient(900px 520px at 6% 94%, rgba(19, 42, 46, 0.5), transparent 62%),
+    linear-gradient(180deg, #0d1012 0%, #0a0d0e 100%);
+}

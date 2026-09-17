@@ -1,0 +1,20 @@
+{
+  "name": "My Kolkata",
+  "short_name": "My Kolkata",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d1012",
+  "theme_color": "#0d1012",
+  "icons": [
+    {
+      "src": "/micon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/micon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

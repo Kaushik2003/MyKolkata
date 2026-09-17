@@ -1,0 +1,28 @@
+/* Profile — who you are here, and the account underneath. */
+
+.header { display: flex; align-items: center; gap: clamp(24px, 4vw, 48px); flex-wrap: wrap; }
+.avatar {
+  width: 128px; height: 128px; flex: none; display: grid; place-items: center; overflow: hidden;
+  border-radius: 999px; background: var(--mk-ink); border: 1px solid rgba(242, 241, 237, 0.12); box-shadow: var(--mk-shadow-card);
+}
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+.identity { min-width: 0; flex: 1 1 320px; }
+.tags { margin-top: var(--mk-4); display: flex; flex-wrap: wrap; gap: var(--mk-2); }
+
+.stats {
+  margin: clamp(48px, 7vw, 80px) 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--mk-5);
+}
+.stat { padding-top: var(--mk-4); border-top: 1px solid rgba(242, 241, 237, 0.12); }
+.statValue {
+  margin: var(--mk-2) 0 0; font-family: var(--mk-display); color: var(--mk-white);
+  font-size: clamp(36px, 5vw, 56px); line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums;
+}
+
+.manage { padding-top: clamp(64px, 9vw, 112px); }
+.clerk { margin-top: var(--mk-6); max-width: 100%; overflow-x: auto; }
+.clerk :global(.cl-rootBox), .clerk :global(.cl-cardBox) { width: 100%; max-width: 100%; }
+
+@media (max-width: 640px) {
+  .stats { grid-template-columns: 1fr; }
+  .avatar { width: 96px; height: 96px; }
+}
