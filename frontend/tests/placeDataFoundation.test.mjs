@@ -10,7 +10,7 @@ import {
   placeMatchConfidence,
 } from '../lib/places/normalizePlace.ts'
 import { OlaPlacesProvider } from '../lib/places/olaPlacesProvider.ts'
-import { createPlaceSearchService } from '../lib/places/placeSearchService.ts'
+import { createPlaceSearchService, matchesEveryWord } from '../lib/places/placeSearchService.ts'
 import { FilePlaceRepository } from '../lib/places/filePlaceRepository.ts'
 import { WikimediaImageProvider } from '../lib/places/wikimediaImageProvider.ts'
 import { AnakinImageProvider, extractPageImage, safePublicUrl } from '../lib/places/anakinImageProvider.ts'
@@ -24,7 +24,7 @@ import {
   parseBoundsQuery,
   parseSearchQuery,
 } from '../lib/places/request.ts'
-import { findCategory, providerTypesForCategory } from '../lib/places/taxonomy.ts'
+import { categories, categoryFromProviderTypes, findCategory, providerTypesForCategory } from '../lib/places/taxonomy.ts'
 
 function place(overrides = {}) {
   return {
@@ -50,8 +50,28 @@ function request(url) {
 test('taxonomy maps UI labels and provider aliases to stable category slugs', () => {
   assert.equal(findCategory('Café').slug, 'cafes')
   assert.equal(findCategory('street food').slug, 'food')
-  assert.deepEqual(providerTypesForCategory('Outdoors'), ['park', 'garden'])
+  assert.equal(findCategory('museums').slug, 'culture')
+  assert.deepEqual(providerTypesForCategory('Outdoors'), ['park', 'zoo', 'natural_feature'])
   assert.equal(findCategory('not-a-category'), null)
+})
+
+test('taxonomy never sends Ola a type it rejects — one unknown type empties the whole request', () => {
+  /* each of these returns zero_results from Ola Places */
+  const rejected = new Set(['garden', 'theatre', 'heritage', 'event_venue', 'market', 'coffee_shop', 'food', 'meal_takeaway'])
+  for (const category of categories) {
+    const types = providerTypesForCategory(category.slug)
+    assert.ok(types.length, `${category.slug} has provider types`)
+    assert.deepEqual(types.filter((type) => rejected.has(type)), [], category.slug)
+  }
+})
+
+test('provider types label places by their most specific kind', () => {
+  assert.equal(categoryFromProviderTypes(['cafe', 'restaurant']).slug, 'cafes')
+  assert.equal(categoryFromProviderTypes(['tourist_attraction', 'natural_feature']).slug, 'outdoors')
+  assert.equal(categoryFromProviderTypes(['bar']).slug, 'food')
+  assert.equal(categoryFromProviderTypes(['metro_station']).slug, 'places')
+  /* whole words only: "department" is not "art" */
+  assert.equal(categoryFromProviderTypes(['apartment complex']).slug, 'places')
 })
 
 test('geographic helpers validate coordinates and calculate Kolkata distances', () => {
@@ -78,9 +98,42 @@ test('provider records normalize varying place response shapes', () => {
   }, 'ola')
 
   assert.equal(normalized.providerPlaceId, 'ola-123')
-  assert.equal(normalized.categorySlug, 'places')
+  assert.equal(normalized.categorySlug, 'culture')
   assert.equal(normalized.latitude, 22.5576)
   assert.equal(normalized.ratingCount, 2500)
+})
+
+test('Ola predictions lose their placeholders and keep a tidy address and neighbourhood', () => {
+  const normalized = normalizeProviderPlace({
+    place_id: 'ola-platform:5000047274683',
+    description: 'Flurys, 18A, Park St, Park Street Area, Kolkata, West Bengal, 700071, India',
+    structured_formatting: {
+      main_text: 'Flurys',
+      secondary_text: '18A, Park St, Park Street Area, Kolkata, West Bengal, 700071, India',
+    },
+    geometry: { location: { lat: 22.5528, lng: 88.3524 } },
+    types: ['bakery'],
+    rating: -1,
+    user_ratings_total: 0,
+    formatted_phone_number: 'NA',
+    website: 'NA',
+    business_status: 'NA',
+    opening_hours: { open_now: false, weekday_text: [] },
+    distance_meters: 2501,
+  }, 'ola')
+
+  assert.equal(normalized.name, 'Flurys')
+  assert.equal(normalized.description, null)
+  assert.equal(normalized.address, '18A, Park St, Park Street Area, Kolkata')
+  assert.equal(normalized.area, 'Park Street Area')
+  assert.equal(normalized.categorySlug, 'cafes')
+  assert.equal(normalized.rating, null)
+  assert.equal(normalized.ratingCount, null)
+  assert.equal(normalized.phone, null)
+  assert.equal(normalized.website, null)
+  assert.equal(normalized.status, null)
+  assert.equal(normalized.openingHours, null)
+  assert.equal(normalized.distanceKm, 2.501)
 })
 
 test('entity matching merges the same real place across providers', () => {
@@ -98,6 +151,10 @@ test('entity matching merges the same real place across providers', () => {
   assert.equal(merged.length, 1)
   assert.equal(merged[0].provider, 'mykolkata')
   assert.deepEqual(merged[0].tags.sort(), ['bakery', 'cafe'])
+
+  const filled = mergeUniquePlaces([place({ phone: null })], [place({ provider: 'ola', providerPlaceId: 'x', phone: '+91 33 2229 7664' })])
+  assert.equal(filled[0].provider, 'mykolkata')
+  assert.equal(filled[0].phone, '+91 33 2229 7664')
 })
 
 test('Ola adapter remains disabled without a private server key', async () => {
@@ -140,10 +197,10 @@ test('Ola detail enrichment name-matches an Overture place before requesting adv
     fetchImpl: async (url) => {
       const requested = new URL(url)
       requestedPaths.push(requested.pathname)
-      if (requested.pathname.endsWith('/textsearch')) {
+      if (requested.pathname.endsWith('/autocomplete')) {
         return { ok: true, json: async () => ({ predictions: [
-          { place_id: 'wrong', name: 'Science City, Kolkata' },
-          { place_id: 'correct', name: 'Indian Museum, Kolkata' },
+          { place_id: 'wrong', structured_formatting: { main_text: 'Science City' }, geometry: { location: { lat: 22.54, lng: 88.39 } }, types: ['museum'] },
+          { place_id: 'correct', structured_formatting: { main_text: 'Indian Museum' }, geometry: { location: { lat: 22.5576, lng: 88.351 } }, types: ['museum'] },
         ] }) }
       }
       return { ok: true, json: async () => ({ result: { place_id: requested.searchParams.get('place_id'), name: 'Indian Museum, Kolkata', lat: 22.5576, lng: 88.351 } }) }
@@ -151,7 +208,137 @@ test('Ola detail enrichment name-matches an Overture place before requesting adv
   })
   const details = await provider.resolveDetails({ name: 'Indian Museum', lat: 22.5576, lng: 88.351 })
   assert.equal(details.providerPlaceId, 'correct')
-  assert.deepEqual(requestedPaths, ['/places/v1/textsearch', '/places/v1/details/advanced'])
+  assert.deepEqual(requestedPaths, ['/places/v1/autocomplete', '/places/v1/details/advanced'])
+})
+
+function olaFetch(routes, calls = []) {
+  return async (url) => {
+    const requested = new URL(url)
+    calls.push(requested)
+    const route = Object.keys(routes).find((path) => requested.pathname.endsWith(path))
+    if (!route) return { ok: false, status: 404, json: async () => ({}) }
+    return routes[route](requested)
+  }
+}
+
+test('Ola nearby asks for coordinates and covers every category when none is chosen', async () => {
+  const calls = []
+  const provider = new OlaPlacesProvider({
+    apiKey: 'private-test-key',
+    baseUrl: 'https://example.test',
+    fetchImpl: olaFetch({
+      '/nearbysearch': (requested) => ({ ok: true, json: async () => ({ predictions: [{
+        place_id: `id-${requested.searchParams.get('types')}`,
+        structured_formatting: { main_text: `Near ${requested.searchParams.get('types')}` },
+        geometry: { location: { lat: 22.553, lng: 88.352 } },
+        types: requested.searchParams.get('types').split(','),
+      }, {
+        place_id: 'no-coordinates', structured_formatting: { main_text: 'Nowhere' }, types: ['cafe'],
+      }] }) }),
+    }, calls),
+  })
+
+  const all = await provider.nearby({ lat: 22.5526, lng: 88.3524, radiusKm: 2, limit: 70 })
+  assert.equal(calls.length, categories.length)
+  assert.ok(calls.every((url) => url.searchParams.get('withCentroid') === 'true'))
+  assert.ok(calls.every((url) => Number(url.searchParams.get('limit')) === 10))
+  assert.equal(all.length, categories.length)
+  assert.ok(all.every((place) => Number.isFinite(place.latitude)))
+
+  calls.length = 0
+  const outdoors = await provider.nearby({ lat: 22.5526, lng: 88.3524, radiusKm: 2, category: 'Outdoors', limit: 20 })
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].searchParams.get('types'), 'park,zoo,natural_feature')
+  assert.equal(outdoors[0].categorySlug, 'outdoors')
+})
+
+test('Ola search finds venues by name through autocomplete and survives text search failing', async () => {
+  const provider = new OlaPlacesProvider({
+    apiKey: 'private-test-key',
+    baseUrl: 'https://example.test',
+    fetchImpl: olaFetch({
+      '/autocomplete': (requested) => {
+        assert.equal(requested.searchParams.get('strictbounds'), 'true')
+        return { ok: true, json: async () => ({ predictions: [
+          { place_id: 'flurys', structured_formatting: { main_text: 'Flurys', secondary_text: '18A, Park St, Kolkata' }, geometry: { location: { lat: 22.5528, lng: 88.3524 } }, types: ['bakery'] },
+          { place_id: 'hyderabad', structured_formatting: { main_text: 'Flurys Hyderabad' }, geometry: { location: { lat: 17.38, lng: 78.48 } }, types: ['bakery'] },
+          { place_id: 'fragment', structured_formatting: { main_text: '47, Near Flurys' }, geometry: { location: { lat: 22.55, lng: 88.35 } }, types: [] },
+        ] }) }
+      },
+      '/textsearch': () => ({ ok: false, status: 500, json: async () => ({}) }),
+    }),
+  })
+  const results = await provider.search({ query: 'flurys', lat: 22.5726, lng: 88.3639 })
+  assert.deepEqual(results.map((result) => result.providerPlaceId), ['flurys'])
+  assert.equal(results[0].matchedBy, 'autocomplete')
+})
+
+test('the map endpoint falls back to live places inside the viewport when the catalogue is empty', async () => {
+  let nearbyParams
+  const service = createPlaceSearchService({
+    repository: { withinBounds: async () => ({ places: [], nextCursor: null, total: 0 }) },
+    provider: {
+      name: 'ola',
+      configured: true,
+      nearby: async (params) => {
+        nearbyParams = params
+        return [
+          place({ provider: 'ola', providerPlaceId: 'inside', latitude: 22.555, longitude: 88.355 }),
+          place({ provider: 'ola', providerPlaceId: 'outside', name: 'Far', latitude: 22.7, longitude: 88.5 }),
+        ]
+      },
+    },
+  })
+  const bounds = { west: 88.33, south: 22.53, east: 88.39, north: 22.58 }
+  const result = await service.withinBounds({ bounds, limit: 100 })
+  assert.deepEqual(result.places.map((entry) => entry.providerPlaceId), ['inside'])
+  assert.equal(result.meta.source, 'ola')
+  assert.ok(Math.abs(nearbyParams.lat - 22.555) < 1e-9 && nearbyParams.radiusKm > 3 && nearbyParams.radiusKm < 5)
+})
+
+test('search turns a neighbourhood into an anchor and keeps loose text matches out', async () => {
+  const service = createPlaceSearchService({
+    repository: { search: async () => [] },
+    provider: {
+      name: 'ola',
+      configured: true,
+      search: async () => [
+        place({ provider: 'ola', providerPlaceId: 'area', name: 'Park Street Area', tags: ['borough'], matchedBy: 'autocomplete', latitude: 22.549, longitude: 88.3547 }),
+        place({ provider: 'ola', providerPlaceId: 'social', name: 'Park Street Social', tags: ['restaurant'], category: 'Food', categorySlug: 'food', matchedBy: 'autocomplete' }),
+        place({ provider: 'ola', providerPlaceId: 'maidan', name: 'Millennium Park', tags: ['park'], address: 'Strand Rd', matchedBy: 'text' }),
+      ],
+    },
+  })
+  const result = await service.search({ query: 'Park Street', lat: 22.5726, lng: 88.3639, limit: 20 })
+  assert.equal(result.meta.area.name, 'Park Street Area')
+  assert.deepEqual(result.places.map((entry) => entry.providerPlaceId), ['social'])
+})
+
+test('text results must mention every word of the query somewhere', () => {
+  const roastery = place({ name: 'Roastery Coffee House', address: 'Golpark, Gariahat, Kolkata', category: 'Cafés', tags: ['cafe'] })
+  assert.equal(matchesEveryWord(roastery, 'cafes in Gariahat'), true)
+  assert.equal(matchesEveryWord(roastery, 'cafes in Salt Lake'), false)
+  assert.equal(matchesEveryWord(place({ name: "Flury's Confectionery" }), 'flurys'), true)
+})
+
+test('a bare category word searches that category around the visitor as well as by name', async () => {
+  let nearbyCategory
+  const service = createPlaceSearchService({
+    repository: { search: async () => [] },
+    provider: {
+      name: 'ola',
+      configured: true,
+      search: async () => [place({ provider: 'ola', providerPlaceId: 'coffee-house', name: 'Coffee House', matchedBy: 'autocomplete' })],
+      nearby: async (params) => {
+        nearbyCategory = params.category
+        return [place({ provider: 'ola', providerPlaceId: 'mintelaa', name: 'Mintelaa', latitude: 22.542, longitude: 88.3526 })]
+      },
+    },
+  })
+  const result = await service.search({ query: 'coffee', lat: 22.5526, lng: 88.3524, limit: 20 })
+  assert.equal(nearbyCategory, 'cafes')
+  assert.equal(result.meta.categoryIntent.slug, 'cafes')
+  assert.deepEqual(result.places.map((entry) => entry.providerPlaceId), ['coffee-house', 'mintelaa'])
 })
 
 test('Wikimedia enrichment accepts a nearby name match and preserves licence attribution', async () => {

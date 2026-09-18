@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { currentUserId } from '@/lib/auth'
 import { prisma } from '@/lib/db/prisma'
 import { toClient } from '@/lib/serialize'
 
@@ -9,6 +10,13 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  if (!(await currentUserId())) {
+    return NextResponse.json(
+      { message: 'Sign in to leave feedback' },
+      { status: 401, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
   const { id } = await context.params
   const body = (await request.json().catch(() => null)) as {
     swipeDirection?: string

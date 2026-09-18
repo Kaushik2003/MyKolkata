@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
+import { requireUser } from '@/lib/auth'
 import { prisma } from '@/lib/db/prisma'
 import { listCatalogue } from '@/lib/catalogue/list'
 import { Card } from '@/components/brand/Card'
@@ -31,6 +32,8 @@ type MarketItem = {
 }
 
 export default async function HomePage() {
+  await requireUser()
+
   let news: NewsItem[] = []
   let marketplace: MarketItem[] = []
   let failed = false

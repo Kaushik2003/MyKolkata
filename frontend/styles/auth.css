@@ -29,8 +29,9 @@
 .mk-auth-lede { margin: var(--mk-6) 0 var(--mk-6); max-width: 36ch; }
 
 .mk-auth-switch { margin-bottom: var(--mk-5); }
+/* Clerk's own boxes are sized through appearance.elements in lib/clerkAppearance.ts —
+   never .cl-* selectors here, which Clerk flags as structural CSS */
 .mk-auth-form { width: 100%; }
-.mk-auth-form .cl-rootBox, .mk-auth-form .cl-cardBox { width: 100%; max-width: 100%; }
 .mk-auth-foot { margin-top: var(--mk-5); display: flex; align-items: center; gap: var(--mk-3); flex-wrap: wrap; }
 
 .mk-auth-photo { position: relative; margin: 0; overflow: hidden; background: var(--mk-ink); }

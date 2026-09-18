@@ -15,7 +15,7 @@
 }
 
 /* ------------------------------------------------------------------ map -- */
-.mapMode { height: 100dvh; min-height: 540px; overflow: hidden; }
+.mapMode { height: 100dvh; min-height: 100dvh; overflow: hidden; }
 .mapWorkspace { position: relative; width: 100%; height: 100%; isolation: isolate; overflow: hidden; }
 .mapFrame { position: absolute; inset: 0; overflow: hidden; background: var(--mk-ink); }
 .map { width: 100%; height: 100%; z-index: 0; background: var(--mk-obsidian); }
@@ -23,7 +23,7 @@
 .map :global(.maplibregl-ctrl-attrib) { padding: 2px 8px; color: var(--mk-ash); background: rgba(13, 16, 18, 0.82); font-size: 11px; }
 .map :global(.maplibregl-ctrl-attrib a) { color: var(--mk-pearl); }
 .map :global(.maplibregl-ctrl-group) {
-  margin: 0 var(--mk-edge) 24px 0; overflow: hidden; border: var(--glass-edge); border-radius: var(--mk-r-sm);
+  margin: 0 var(--mk-edge) 44px 0; overflow: hidden; border: var(--glass-edge); border-radius: var(--mk-r-sm);
   background: var(--mk-ink); box-shadow: var(--mk-shadow-card);
 }
 .map :global(.maplibregl-ctrl-group button) { width: 44px; height: 44px; }
@@ -34,23 +34,33 @@
 /* the deck floats under the notch bar, as glass — colour from the map bleeds through */
 .mapOverlay {
   position: absolute; top: calc(var(--mk-nav) + 8px); left: 50%; z-index: var(--z-controls);
-  width: min(1180px, calc(100% - 2 * var(--mk-edge))); pointer-events: none; transform: translateX(-50%);
+  width: min(640px, calc(100% - 2 * var(--mk-edge))); pointer-events: none; transform: translateX(-50%);
 }
 .mapOverlay > * { pointer-events: auto; }
 
 .controlDeck {
   min-height: 64px; padding: 8px 10px 8px 16px;
-  display: grid; grid-template-columns: auto minmax(220px, 1fr) auto auto auto; align-items: center; gap: var(--mk-3);
+  display: grid; grid-template-columns: minmax(220px, 1fr) auto auto auto; align-items: center; gap: var(--mk-3);
   border: var(--glass-edge); border-radius: 18px; background: var(--glass); box-shadow: var(--glass-shadow);
   -webkit-backdrop-filter: blur(26px) saturate(180%); backdrop-filter: blur(26px) saturate(180%);
 }
-.mapIdentity {
-  min-height: 44px; padding-right: var(--mk-4); display: flex; align-items: center; gap: var(--mk-3);
-  border-right: 1px solid rgba(242, 241, 237, 0.12); color: var(--mk-pearl); text-decoration: none;
+/* the map's deck: one slim pill — back, search, filter, list, locate */
+.mapDeck {
+  min-height: 48px; padding: 4px 6px 4px 4px;
+  grid-template-columns: 40px minmax(0, 1fr) repeat(3, 40px); gap: 2px; border-radius: 999px;
 }
-.mapIdentityText { display: grid; line-height: 1.15; }
-.mapIdentityTitle { font-family: var(--mk-display); font-size: 18px; letter-spacing: -0.01em; color: var(--mk-white); }
-.mapIdentity:hover .mapIdentityTitle { color: var(--mk-pearl); }
+.mapBack, .deckIcon {
+  position: relative; width: 40px; height: 40px; display: grid; place-items: center;
+  border-radius: 999px; color: var(--mk-pearl); text-decoration: none;
+}
+.mapBack:hover, .deckIcon:hover:not(:disabled) { background: rgba(242, 241, 237, 0.08); }
+.deckIcon[aria-expanded="true"], .deckIcon[aria-pressed="true"] { color: var(--mk-taxi); }
+.mapDeck .searchBox { min-height: 40px; padding: 0 4px 0 8px; gap: var(--mk-2); border-bottom-color: transparent; }
+.mapDeck .searchBox::after { left: 8px; right: 8px; }
+.mapDeck .searchBox input { min-height: 38px; font-size: 16px; }
+.mapDeck .searchBox .deckIcon { width: 32px; height: 32px; }
+.mapDeck .locateIcon { background: transparent; }
+.mapDeck .filterCount { position: absolute; top: 2px; right: 0; min-width: 16px; height: 16px; padding: 0 4px; font-size: 10px; }
 
 .searchBox { min-height: 44px; }
 .searchBox input { min-height: 42px; font-size: 16px; }
@@ -77,8 +87,9 @@
 .clearFilters { justify-self: start; }
 
 .mapStatusBar {
-  position: absolute; top: calc(var(--mk-nav) + 88px); left: 50%; z-index: 300;
-  display: flex; align-items: center; gap: var(--mk-2); transform: translateX(-50%);
+  position: absolute; top: calc(var(--mk-nav) + 68px); left: 50%; z-index: 300;
+  width: max-content; max-width: calc(100% - 2 * var(--mk-edge));
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--mk-2); transform: translateX(-50%);
 }
 .statusPill {
   min-height: 36px; padding: 0 14px; display: inline-flex; align-items: center; border-radius: 999px;
@@ -93,7 +104,7 @@
   background: var(--mk-ink); box-shadow: var(--mk-shadow-card);
   font-size: 14px; line-height: 1.5; color: var(--mk-pearl); transform: translateX(-50%);
 }
-.locationNotice { top: calc(var(--mk-nav) + 136px); }
+.locationNotice { top: calc(var(--mk-nav) + 112px); }
 .dataNotice { bottom: 96px; display: flex; align-items: center; justify-content: space-between; gap: var(--mk-3); }
 
 .mapStatus, .emptyState {
@@ -102,8 +113,75 @@
   border: var(--glass-edge); border-radius: var(--mk-r-lg); background: var(--mk-ink); box-shadow: var(--mk-shadow-panel);
   color: var(--mk-pearl); transform: translate(-50%, -50%);
 }
+/* an empty answer sits where the results would, so the map stays readable */
+.emptyState { inset: auto auto 44px max(var(--mk-edge), calc((100% - 1180px) / 2)); width: min(440px, calc(100% - 2 * var(--mk-edge))); transform: none; }
+
+/* ------------------------------------------------------------- the rail -- */
+/*  What's on the map, as a row you can scroll — tap one to find it.        */
+.resultsRail {
+  /* 44px up keeps Ola's logo and attribution visible beneath it */
+  position: absolute; left: max(var(--mk-edge), calc((100% - 1180px) / 2)); right: calc(var(--mk-edge) + 64px); bottom: 44px; z-index: 300;
+  margin: 0; padding: 4px; list-style: none;
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(220px, 260px); gap: var(--mk-2);
+  overflow-x: auto; overscroll-behavior-inline: contain; scroll-snap-type: x proximity; scrollbar-width: none;
+  transition: opacity var(--mk-t-hover) var(--mk-ease-in-out);
+}
+.resultsRail::-webkit-scrollbar { display: none; }
+.resultsRail > li { scroll-snap-align: start; min-width: 0; }
+.resultsRailStale { opacity: 0.55; }
+.railItem {
+  width: 100%; min-height: 64px; padding: 10px 14px 10px 10px;
+  display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: var(--mk-3);
+  border: var(--glass-edge); border-radius: var(--mk-r-md); background: var(--glass); box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+  color: var(--mk-pearl); text-align: left; cursor: pointer;
+  transition: border-color var(--mk-t-hover) var(--mk-ease-in-out), background-color var(--mk-t-hover) var(--mk-ease-in-out);
+}
+.railItem:hover, .railItem:focus-visible { border-color: rgba(242, 241, 237, 0.34); background: var(--mk-ink); }
+.railIcon { width: 40px; height: 40px; display: grid; place-items: center; border-radius: var(--mk-r-sm); background: var(--mk-slate); color: var(--mk-pearl); }
+.railText { min-width: 0; display: grid; gap: 2px; }
+.railTitle { overflow: hidden; font-family: var(--mk-display); font-size: 16px; line-height: 1.25; color: var(--mk-white); text-overflow: ellipsis; white-space: nowrap; }
+.railMeta { overflow: hidden; font-size: 12px; letter-spacing: 0.02em; color: var(--mk-ash); text-overflow: ellipsis; white-space: nowrap; }
+.railItem:hover .railMeta { color: var(--mk-taxi); }
 .mapStatusTitle { margin: 0; font-family: var(--mk-display); font-size: 22px; line-height: 1.2; color: var(--mk-white); }
 .emptyState button, .mapStatus button { margin-top: var(--mk-2); }
+
+/* ----------------------------------------------------------- the legend -- */
+/*  Top-right under the deck: a quiet pill that opens the key and filters.   */
+.legend {
+  position: absolute; top: calc(var(--mk-nav) + 68px); right: var(--mk-edge); z-index: 350;
+  display: grid; justify-items: end; gap: var(--mk-2);
+}
+.legendToggle, .legendPanel {
+  border: var(--glass-edge); background: var(--glass); box-shadow: var(--glass-shadow); color: var(--mk-pearl);
+  -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+}
+.legendToggle {
+  min-height: 36px; padding: 0 14px 0 10px; display: inline-flex; align-items: center; gap: var(--mk-2);
+  border-radius: 999px; font-size: 13px; letter-spacing: 0.02em; cursor: pointer;
+}
+.legendToggle[aria-expanded="true"] { border-color: rgba(242, 241, 237, 0.34); }
+.legendDots { display: inline-flex; }
+.legendDots > span { width: 12px; height: 12px; border: 1.5px solid var(--mk-pearl); border-radius: 50%; }
+.legendDots > span + span { margin-left: -4px; }
+.legendPanel {
+  width: 200px; max-height: min(60dvh, 420px); overflow-y: auto; padding: 6px;
+  display: grid; gap: 2px; border-radius: var(--mk-r-md);
+}
+.legendRow {
+  min-height: 40px; padding: 0 10px 0 6px; display: flex; align-items: center; gap: var(--mk-3);
+  border: 0; border-radius: var(--mk-r-sm); background: transparent; color: var(--mk-pearl);
+  font-size: 14px; text-align: left; cursor: pointer;
+}
+.legendRow:hover { background: rgba(242, 241, 237, 0.06); }
+.legendRow[aria-pressed="true"] { background: rgba(242, 241, 237, 0.1); color: var(--mk-white); }
+.legendRow[aria-pressed="true"]::after { content: ''; width: 6px; height: 6px; margin-left: auto; border-radius: 50%; background: var(--mk-taxi); }
+.legendSwatch {
+  width: 26px; height: 26px; flex: none; display: grid; place-items: center; border: 2px solid var(--mk-pearl); border-radius: 50%;
+  font-family: var(--mk-display); font-size: 12px; line-height: 1; color: var(--mk-pearl);
+}
+.legendSwatchAll { background: transparent; font-size: 18px; }
+.legendNote { margin: 4px 6px 2px; padding-top: 6px; border-top: 1px solid rgba(242, 241, 237, 0.08); font-size: 12px; color: var(--mk-ash); }
 
 /* your location — the one yellow thing on the map, like a taxi in the rain */
 .userMarker {
@@ -113,7 +191,7 @@
 
 /* ------------------------------------------------------------ the sheet -- */
 .placeDetails {
-  position: absolute; left: max(var(--mk-edge), calc((100% - 1180px) / 2)); bottom: 24px; z-index: var(--z-place);
+  position: absolute; left: max(var(--mk-edge), calc((100% - 1180px) / 2)); bottom: 44px; z-index: var(--z-place);
   width: min(440px, calc(100% - 2 * var(--mk-edge))); overflow: hidden;
   display: grid; grid-template-columns: 140px minmax(0, 1fr);
   border: 1px solid rgba(242, 241, 237, 0.1); border-radius: var(--mk-r-lg);
@@ -135,13 +213,19 @@
 .detailsDesc { color: var(--mk-pearl); }
 .enrichmentStatus { margin: var(--mk-2) 0 0; font-size: 13px; color: var(--mk-ash); }
 .contactLinks { margin-top: var(--mk-3); display: flex; flex-wrap: wrap; gap: var(--mk-2); }
+.hours { margin-top: var(--mk-3); font-size: 13px; color: var(--mk-ash); }
+.hours summary { cursor: pointer; color: var(--mk-pearl); }
+.hours ul { margin: var(--mk-2) 0 0; padding: 0; list-style: none; display: grid; gap: 2px; font-variant-numeric: tabular-nums; }
 .imageCredit { margin: var(--mk-3) 0 0; font-size: 12px; color: var(--mk-ash); }
 .imageCredit a { color: inherit; text-underline-offset: 2px; }
 .detailsFooter {
-  margin-top: var(--mk-3); padding-top: var(--mk-2); display: flex; align-items: center; justify-content: space-between; gap: var(--mk-3);
+  margin-top: var(--mk-3); padding-top: var(--mk-2); display: flex; align-items: center; justify-content: flex-start; gap: var(--mk-3);
   border-top: 1px solid rgba(242, 241, 237, 0.08);
 }
-.detailsFooter a:hover { color: var(--mk-white); }
+.detailsFooter a:hover, .detailsFooter button:hover { color: var(--mk-white); }
+.detailsActions { display: flex; flex-wrap: wrap; gap: 0 var(--mk-5); }
+.cardActions { margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0 var(--mk-5); }
+.detailsMeta .distance { font-size: 13px; }
 .distance { font-size: 13px; letter-spacing: 0.02em; color: var(--mk-taxi); font-variant-numeric: tabular-nums; }
 
 /* -------------------------------------------------------------- results -- */
@@ -182,7 +266,7 @@
 .cardAddress { margin: var(--mk-3) 0 0; font-size: 14px; line-height: 1.5; color: var(--mk-ash); }
 .cardDesc { margin: var(--mk-2) 0 0; font-size: 15px; line-height: 1.55; color: var(--mk-pearl); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .cardFooter { margin-top: var(--mk-2); display: flex; align-items: center; justify-content: space-between; gap: var(--mk-3); }
-.cardFooter button:only-child { margin-left: auto; }
+.anchorButton { margin: 0 0 var(--mk-6); }
 
 .placeCardList {
   display: grid; grid-template-columns: minmax(200px, 28%) minmax(0, 1fr); gap: var(--mk-6); align-items: center;
@@ -199,41 +283,36 @@
 
 /* ----------------------------------------------------------- responsive -- */
 @media (max-width: 1080px) {
-  .controlDeck { grid-template-columns: auto minmax(180px, 1fr) auto auto auto; }
-  .mapIdentityText { display: none; }
-  .mapIdentity { padding-right: var(--mk-3); }
   .viewToggle button span { display: none; }
   .gridView { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 767px) {
-  .mapOverlay { width: calc(100% - 24px); top: calc(var(--mk-nav) + 4px); }
-  .controlDeck { min-height: 0; padding: 8px; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: var(--mk-2); border-radius: 16px; }
-  .mapIdentity { justify-content: center; border-right: 0; padding: 0; }
-  .searchBox { grid-column: 2; }
-  .filterButton { grid-row: 2; grid-column: 1 / 2; padding: 0; }
-  .filterButton > span:not(.filterCount) { display: none; }
-  .viewToggle { grid-row: 2; grid-column: 2 / 4; width: 100%; }
-  .viewToggle button { flex: 1; }
-  .viewToggle button span { display: inline; }
-  .locateIcon { grid-row: 1; grid-column: 3; }
+  .mapMode { min-height: 0; height: 100svh; height: 100dvh; }
+  .mapOverlay { width: calc(100% - 24px); top: calc(var(--mk-nav) + env(safe-area-inset-top, 0px) + 4px); }
+  .mapDeck { min-height: 44px; padding: 2px 4px 2px 2px; grid-template-columns: 38px minmax(0, 1fr) repeat(3, 38px); gap: 0; }
+  .mapBack, .deckIcon { width: 38px; height: 38px; }
   .filterStack { top: calc(100% + 8px); left: 0; right: 0; width: auto; max-height: min(58dvh,480px); overflow-y: auto; }
   .categoryFilters, .areaFilters { width: 100%; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; padding: 2px 2px 8px; overscroll-behavior-x: contain; scrollbar-width: thin; touch-action: pan-x pan-y; -webkit-overflow-scrolling: touch; }
-  .mapStatusBar { top: calc(var(--mk-nav) + 128px); }
+  .mapStatusBar { top: calc(var(--mk-nav) + env(safe-area-inset-top, 0px) + 100px); }
+  .legend { top: calc(var(--mk-nav) + env(safe-area-inset-top, 0px) + 56px); right: 12px; }
   .statusPill { display: none; }
-  .locationNotice { top: calc(var(--mk-nav) + 136px); }
-  .map :global(.maplibregl-ctrl-group) { margin: 0 12px 12px 0; }
-  .placeDetails { left: 12px; bottom: 12px; width: calc(100% - 24px); grid-template-columns: 108px minmax(0, 1fr); }
+  .locationNotice { top: calc(var(--mk-nav) + env(safe-area-inset-top, 0px) + 148px); }
+  .map :global(.maplibregl-ctrl-group) { display: flex; margin: 0 12px calc(12px + env(safe-area-inset-bottom, 0px)) 0; }
+  .placeDetails { left: 12px; bottom: calc(40px + env(safe-area-inset-bottom, 0px)); width: calc(100% - 24px); max-height: calc(100dvh - var(--mk-nav) - 180px); overflow-y: auto; grid-template-columns: 108px minmax(0, 1fr); }
+  .resultsRail { left: 8px; right: 8px; bottom: calc(40px + env(safe-area-inset-bottom, 0px)); grid-auto-columns: minmax(200px, 78%); }
+  .emptyState { left: 12px; bottom: calc(40px + env(safe-area-inset-bottom, 0px)); width: calc(100% - 24px); }
+  .dataNotice { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
   .detailsMedia { min-height: 180px; }
   .detailsBody { padding: var(--mk-4); }
   .detailsDesc { display: none; }
 
-  .explorer .controlDeck { position: relative; top: auto; grid-template-columns: minmax(0, 1fr) 44px; }
+  .explorer .controlDeck { position: relative; top: auto; padding: 8px; grid-template-columns: minmax(0, 1fr) 44px; gap: var(--mk-2); border-radius: 16px; }
   .explorer .searchBox { grid-column: 1; }
   .explorer .filterButton { grid-row: 2; grid-column: 1 / 3; padding: 0 16px; }
   .explorer .filterButton > span:not(.filterCount) { display: inline; }
   .explorer .viewToggle { grid-row: 3; grid-column: 1 / 3; }
-  .explorer .locateIcon { grid-column: 2; }
+  .explorer .locateIcon { grid-row: 1; grid-column: 2; }
   .gridView { grid-template-columns: 1fr; }
   .placeCardList, .placeSkeletonList { grid-template-columns: 112px minmax(0, 1fr); gap: var(--mk-4); }
   .placeCardList .cardBody { padding: var(--mk-2) var(--mk-2) var(--mk-2) 0; }
@@ -241,11 +320,10 @@
 }
 
 @media (max-width: 390px) {
-  .viewToggle button span { display: none; }
   .placeDetails { grid-template-columns: 88px minmax(0, 1fr); }
   .detailsAddress { display: none; }
 }
 
 @media (forced-colors: active) {
-  .controlDeck, .filterStack, .placeCardList, .placeDetails, .statusPill { border: 1px solid CanvasText; }
+  .controlDeck, .filterStack, .placeCardList, .placeDetails, .statusPill, .railItem, .legendToggle, .legendPanel { border: 1px solid CanvasText; }
 }

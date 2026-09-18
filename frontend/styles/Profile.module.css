@@ -19,8 +19,8 @@
 }
 
 .manage { padding-top: clamp(64px, 9vw, 112px); }
+/* UserProfile's own boxes fill this through appearance.elements in lib/clerkAppearance.ts */
 .clerk { margin-top: var(--mk-6); max-width: 100%; overflow-x: auto; }
-.clerk :global(.cl-rootBox), .clerk :global(.cl-cardBox) { width: 100%; max-width: 100%; }
 
 @media (max-width: 640px) {
   .stats { grid-template-columns: 1fr; }

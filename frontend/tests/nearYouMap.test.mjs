@@ -8,7 +8,7 @@ const stylesSource = await readFile(new URL('../styles/NearYou.module.css', impo
 const packageSource = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
 
 test('Near You opens in map mode and replaces the map for Grid or List', () => {
-  assert.match(pageSource, /useState\('map'\)/)
+  assert.match(pageSource, /\? searchParams\.get\('view'\) : 'map'\)/)
   assert.match(pageSource, /view === 'map' \? \(/)
   assert.match(pageSource, /styles\.gridView : styles\.listView/)
   assert.match(pageSource, /styles\.mapMode : styles\.resultsMode/)
@@ -23,12 +23,11 @@ test('selected places offer a safe Google Maps coordinate link', () => {
   assert.match(stylesSource, /\.detailsFooter a:hover/)
 })
 
-test('Ola map places use real photos or category markers while grouped places use native count clusters', () => {
+test('Ola map places use real photos or category markers, each shown on its own', () => {
   assert.equal(packageSource.dependencies['olamaps-web-sdk'], '1.3.0')
   assert.match(mapSource, /import\('olamaps-web-sdk'\)/)
   assert.match(mapSource, /new OlaMaps\(\{ apiKey \}\)/)
-  assert.match(mapSource, /cluster: true/)
-  assert.match(mapSource, /getClusterExpansionZoom/)
+  assert.doesNotMatch(mapSource, /cluster: true|clusterMaxZoom|clusterRadius|getClusterExpansionZoom/)
   assert.match(mapSource, /image\.src = source/)
   assert.match(mapSource, /CATEGORY_MARKERS/)
   assert.match(mapSource, /mykolkata-category-/)
@@ -41,16 +40,18 @@ test('Ola map places use real photos or category markers while grouped places us
 })
 
 test('selected map photos use a restrained highlight ring — the one crimson on the map', () => {
-  assert.match(mapSource, /'circle-radius': 30/)
+  assert.match(mapSource, /'circle-radius': 22/)
   assert.match(mapSource, /'circle-stroke-width': 2/)
   assert.match(mapSource, /'circle-color': '#d72638'/)
   assert.doesNotMatch(mapSource, /'circle-radius': 34/)
 })
 
 test('Ola map configuration fails visibly and safely when the browser key is missing', () => {
-  assert.match(mapSource, /process\.env\.NEXT_PUBLIC_OLA_MAPS_API_KEY/)
-  assert.match(mapSource, /setStatus\('missing-key'\)/)
+  assert.match(mapSource, /process\.env\.NEXT_PUBLIC_OLA_MAPS_API_KEY \|\| 'proxied'/)
+  assert.match(mapSource, /'missing-key'/)
   assert.match(mapSource, /Ola Maps is ready to connect\./)
+  assert.match(mapSource, /clientOlaStyleUrl|proxiedOlaMapsUrl/)
+  assert.match(mapSource, /olaMapsProxy/)
 })
 
 test('Ola resource diagnostics are redacted without treating optional style warnings as fatal', () => {
@@ -62,12 +63,18 @@ test('Ola resource diagnostics are redacted without treating optional style warn
 })
 
 test('the map is always the dark style — there is no theme to switch', () => {
-  assert.match(mapSource, /default-dark-standard\/style\.json/)
+  assert.match(mapSource, /clientOlaStyleUrl\(\)/)
+  assert.match(mapSource, /style: styleUrl,/)
+  assert.doesNotMatch(mapSource, /styleResponse\.json\(\)/)
   assert.doesNotMatch(mapSource, /default-light-standard/)
   assert.doesNotMatch(mapSource, /useTheme|darkMode|setStyle|styledata/)
-  assert.match(mapSource, /style: MAP_STYLE/)
   assert.match(mapSource, /\}, \[attempt\]\)/)
   assert.match(mapSource, /map\.moveLayer\(layerId\)/)
+})
+
+test('map tiles go through the same-origin Ola proxy so phone LAN origins are allowed', () => {
+  assert.match(mapSource, /proxiedOlaMapsUrl/)
+  assert.match(mapSource, /transformRequest: \(url\) => \(\{ url: proxiedOlaMapsUrl\(url\) \}\)/)
 })
 
 test('map markers use brand surfaces and letters, not a rainbow', () => {
@@ -82,6 +89,16 @@ test('map mode fills the viewport and floats its controls under the notch bar', 
   assert.match(stylesSource, /\.mapFrame\s*\{[^}]*position: absolute;[^}]*inset: 0/s)
   assert.match(stylesSource, /\.mapOverlay\s*\{[^}]*position: absolute;[^}]*top: calc\(var\(--mk-nav\) \+ 8px\)/s)
   assert.match(stylesSource, /\.controlDeck\s*\{[^}]*backdrop-filter: blur\(26px\) saturate\(180%\)/s)
+  assert.doesNotMatch(stylesSource, /\.mapMode\s*\{[^}]*min-height: 540px/s)
+})
+
+test('the Ola map resizes when the mobile viewport settles or rotates', () => {
+  assert.match(mapSource, /function waitForSizedContainer/)
+  assert.match(mapSource, /function bindMapResize/)
+  assert.match(mapSource, /new ResizeObserver/)
+  assert.match(mapSource, /visualViewport/)
+  assert.match(mapSource, /orientationchange/)
+  assert.match(mapSource, /map\.resize\(\)/)
 })
 
 test('Near You exposes compact filters and all three result views', () => {
@@ -118,7 +135,7 @@ test('Near You never labels generic category artwork as a venue photo', () => {
 test('Near You uses truthful loading skeletons instead of demo-place fallbacks', () => {
   assert.match(pageSource, /function PlaceResultsSkeleton\(\{ layout \}\)/)
   assert.match(pageSource, /dataStatus === 'loading' \? \(\s*<PlaceResultsSkeleton layout=\{view\}/s)
-  assert.match(pageSource, /<AlponaLoader label="Loading fresh Kolkata places"/)
+  assert.match(pageSource, /<AlponaLoader label="Loading Kolkata places"/)
   assert.match(pageSource, /dataStatus === 'success' && !visiblePlaces\.length/)
   assert.doesNotMatch(pageSource, /setDataPlaces\(nearbyPlaces/)
   assert.doesNotMatch(pageSource, /Showing saved Kolkata picks/)
@@ -126,27 +143,50 @@ test('Near You uses truthful loading skeletons instead of demo-place fallbacks',
   assert.doesNotMatch(stylesSource, /@keyframes/)
 })
 
-test('Near You only presents distance as user-relative after location is known', () => {
-  assert.match(pageSource, /showDistance && place\.distance/)
+test('Near You only measures distance from somewhere meaningful', () => {
+  assert.match(pageSource, /if \(origin\.source === 'user'\) return `\$\{place\.distance\} away`/)
+  assert.match(pageSource, /return `\$\{place\.distance\} from \$\{origin\.label\}`/)
   assert.match(pageSource, /locationKnown \? 'Near you' : 'Kolkata map'/)
-  assert.match(pageSource, /userPosition \? 'Near You' : 'Explore Kolkata'/)
-  assert.match(pageSource, /if \(userPosition\) \{\s*params\.set\('lat'/s)
+  assert.match(pageSource, /origin\.source === 'user'\s*\? 'Near you'/s)
   assert.match(pageSource, /routeLocate === '1'/)
+  assert.match(pageSource, /locate && !label/)
+  assert.match(pageSource, /window\.isSecureContext/)
+  assert.match(pageSource, /GEO_OPTIONS/)
 })
 
-test('curated Explore guides retain context while loading useful place queries', () => {
-  assert.match(pageSource, /findExploreGuide\(routeGuideId\)/)
-  assert.match(pageSource, /activeGuide\?\.name/)
-  assert.match(pageSource, /activeGuide\?\.description/)
-  assert.match(stylesSource, /\.guideIntro/)
+test('Near You never shows an empty answer for a request that is still on its way', () => {
+  assert.match(pageSource, /const requestKey = requestUrl \? `\$\{requestUrl\}#\$\{retryVersion\}` : ''/)
+  assert.match(pageSource, /holdForLocation \|\| typing \|\| result\.key !== requestKey \? 'loading' : result\.status/)
+  assert.doesNotMatch(pageSource, /No Kolkata stops match that search/)
+  assert.doesNotMatch(pageSource, /exploreData|findExploreGuide|searchNearbyPlaces/)
+})
+
+test('visitors can explore around themselves, a searched area, any place, or the map view', () => {
+  assert.match(pageSource, /source: 'user', radiusKm: NEAR_YOU_RADIUS_KM/)
+  assert.match(pageSource, /const exploreArea = \(anchor\) =>/)
+  assert.match(pageSource, /Explore around \{areaAnchor\.name\}/)
+  assert.match(pageSource, /const exploreAround = \(place\) =>/)
+  assert.match(pageSource, /What&apos;s nearby/)
+  assert.match(pageSource, /exploreRequest\(\{/)
+})
+
+test('the map lists what it shows in a rail that selects the place', () => {
+  assert.match(pageSource, /className=\{`\$\{styles\.resultsRail\}/)
+  assert.match(pageSource, /onClick=\{\(\) => selectPlace\(place\.id\)\}/)
+  assert.match(stylesSource, /\.resultsRail\s*\{[^}]*overflow-x: auto/s)
+})
+
+test('the map moves once per camera key and leaves a viewport the visitor chose alone', () => {
+  assert.match(mapSource, /camera\.key === appliedCameraKeyRef\.current/)
+  assert.match(mapSource, /map\.once\('load', finishSetup\)/)
+  assert.match(pageSource, /if \(origin\.source === 'map'\) return null/)
 })
 
 test('Search this area applies the current geographic viewport', () => {
   assert.match(mapSource, /bounds\.getNorth\(\)/)
   assert.match(mapSource, /bounds\.getSouth\(\)/)
-  assert.match(pageSource, /setRequestBounds\(pendingBounds\)/)
-  assert.match(pageSource, /\/api\/explore\/map/)
-  assert.match(pageSource, /Object\.entries\(requestBounds\)/)
+  assert.match(pageSource, /const searchThisArea = \(\) =>/)
+  assert.match(pageSource, /source: 'map', radiusKm: Math\.min\(Math\.max\(corner, 0\.4\), 15\)/)
   assert.match(pageSource, />\s*Search this area\s*</)
 })
 
@@ -171,4 +211,12 @@ test('Near You map chrome sits on the brand surfaces', () => {
   assert.match(stylesSource, /\.map :global\(\.maplibregl-ctrl-group\)[^}]*background: var\(--mk-ink\)/s)
   assert.match(stylesSource, /\.placeDetails\s*\{[^}]*background: var\(--mk-ink\)/s)
   assert.doesNotMatch(stylesSource, /:global\(\.dark\)|leaflet-tile-pane|#14243a/)
+})
+
+test('the map legend uses the pin letters and selects a kind of place', () => {
+  assert.match(mapSource, /export const CATEGORY_MARKERS/)
+  assert.match(pageSource, /function MapLegend\(/)
+  assert.match(pageSource, /aria-controls="near-you-legend"/)
+  assert.match(pageSource, /onCategoryChange\(category === name \? 'All' : name\)/)
+  assert.match(stylesSource, /\.legendRow\[aria-pressed="true"\]/)
 })

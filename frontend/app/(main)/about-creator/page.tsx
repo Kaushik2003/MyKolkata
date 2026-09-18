@@ -1,9 +1,12 @@
 import type { Metadata } from 'next'
 import { SectionHead } from '@/components/brand/SectionHead'
+import { requireUser } from '@/lib/auth'
 
 export const metadata: Metadata = { title: 'About the creator' }
 
-export default function AboutCreator() {
+export default async function AboutCreator() {
+  await requireUser()
+
   return (
     <main className="mk-page mk-page-top">
       <div className="mk-wrap">

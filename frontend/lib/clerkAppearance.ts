@@ -44,7 +44,7 @@ export const clerkAppearance = {
       border: '1px solid rgba(242, 241, 237, 0.08)',
     },
     cardBox: { borderRadius: '20px', width: '100%', maxWidth: '100%' },
-    rootBox: { width: '100%' },
+    rootBox: { width: '100%', maxWidth: '100%' },
     /* the pages carry their own sign in / create account switch */
     footerAction: { display: 'none' },
   },
