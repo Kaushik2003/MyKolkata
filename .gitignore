@@ -15,6 +15,6 @@ dist/
 data/
 premium-audit.json
 .env.backend
-docs/
 .tmp-overture-data/
 .tmp-overture-tools/
+pandal-routes.json
