@@ -11,7 +11,7 @@ const ALLOWED_PREFIXES = [
   'tiles/raster/',
 ]
 
-export function isAllowedOlaMapsPath(path) {
+export function isAllowedOlaMapsPath(path: string | null | undefined) {
   const normalized = String(path || '').replace(/^\/+/, '')
   if (!normalized || normalized.includes('..')) return false
   return ALLOWED_PREFIXES.some((prefix) => normalized.startsWith(prefix))
@@ -22,7 +22,7 @@ export function olaMapsRequestOrigin() {
     || (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : '')).replace(/\/$/, '')
 }
 
-export function rewriteOlaMapsUrls(body, proxyOrigin = '') {
+export function rewriteOlaMapsUrls(body: string, proxyOrigin = '') {
   const prefix = `${proxyOrigin}${OLA_MAPS_PROXY_PREFIX}/`
   return String(body)
     .replaceAll(`${OLA_MAPS_HOST}/`, prefix)
@@ -35,7 +35,7 @@ export function clientOlaStyleUrl() {
 }
 
 /* MapLibre may still request absolute Ola URLs from cached style bits — send them through us. */
-export function proxiedOlaMapsUrl(url) {
+export function proxiedOlaMapsUrl(url: string) {
   try {
     const base = typeof window !== 'undefined' ? window.location.origin : 'http://localhost'
     const parsed = new URL(url, base)
